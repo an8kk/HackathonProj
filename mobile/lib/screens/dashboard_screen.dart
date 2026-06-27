@@ -159,13 +159,8 @@ class DashboardScreen extends StatelessWidget {
                 children: [
                   _ShiftCard(
                     count: store.count,
-                    approvedCount: store.approvedCount,
                     startLabel: startLabel,
                   ),
-                  if (store.hasSuspiciousCluster) ...[
-                    const SizedBox(height: 12),
-                    const _SuspiciousClusterBanner(),
-                  ],
                   const SizedBox(height: 16),
                   _QuickAction(onTap: () => context.go('/new')),
                   const SizedBox(height: 24),
@@ -195,11 +190,9 @@ class DashboardScreen extends StatelessWidget {
 class _ShiftCard extends StatelessWidget {
   const _ShiftCard({
     required this.count,
-    required this.approvedCount,
     required this.startLabel,
   });
   final int count;
-  final int approvedCount;
   final String startLabel;
 
   @override
@@ -250,14 +243,6 @@ class _ShiftCard extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Одобрено: $approvedCount / $count',
-            style: GoogleFonts.golosText(
-              fontSize: 13,
-              color: Colors.white70,
-            ),
           ),
         ],
       ),
@@ -383,78 +368,9 @@ class _WriteOffCard extends StatelessWidget {
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(time,
-                  style: GoogleFonts.golosText(
-                      fontSize: 12, color: BahandiColors.muted)),
-              const SizedBox(height: 4),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: BahandiColors.orange.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'На проверке',
-                  style: GoogleFonts.golosText(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: BahandiColors.orange,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SuspiciousClusterBanner extends StatelessWidget {
-  const _SuspiciousClusterBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFDC3545).withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFDC3545).withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.warning_amber_rounded, size: 18, color: Color(0xFFDC3545)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Подозрительная активность',
-                  style: GoogleFonts.golosText(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFFDC3545),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '3 или более заявок за 10 минут — супервайзер будет уведомлён',
-                  style: GoogleFonts.golosText(
-                    fontSize: 12,
-                    color: const Color(0xFFDC3545),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          Text(time,
+              style: GoogleFonts.golosText(
+                  fontSize: 12, color: BahandiColors.muted)),
         ],
       ),
     );

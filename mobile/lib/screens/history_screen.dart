@@ -38,28 +38,6 @@ class _HistoryCard extends StatelessWidget {
   const _HistoryCard({required this.entry});
   final WriteOffEntry entry;
 
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'approved':
-        return BahandiColors.green;
-      case 'rejected':
-        return const Color(0xFFDC3545);
-      default:
-        return BahandiColors.orange;
-    }
-  }
-
-  String _statusLabel(String status) {
-    switch (status) {
-      case 'approved':
-        return 'Одобрено';
-      case 'rejected':
-        return 'Отклонено';
-      default:
-        return 'На проверке';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final date = entry.submittedAt;
@@ -67,9 +45,6 @@ class _HistoryCard extends StatelessWidget {
         '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
     final timeLabel =
         '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-
-    final statusColor = _statusColor(entry.status);
-    final statusLabel = _statusLabel(entry.status);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -82,34 +57,13 @@ class _HistoryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  entry.product,
-                  style: GoogleFonts.golosText(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: BahandiColors.charcoal,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  statusLabel,
-                  style: GoogleFonts.golosText(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: statusColor,
-                  ),
-                ),
-              ),
-            ],
+          Text(
+            entry.product,
+            style: GoogleFonts.golosText(
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+              color: BahandiColors.charcoal,
+            ),
           ),
           const SizedBox(height: 10),
           const Divider(height: 1, color: BahandiColors.cardBorder),
@@ -144,13 +98,9 @@ class _HistoryCard extends StatelessWidget {
                   color: BahandiColors.muted,
                 ),
               ),
-              if (entry.status == 'pending') _PendingTimer(since: entry.submittedAt),
+              _RepeatButton(entry: entry),
             ],
           ),
-          if (entry.status != 'pending') ...[
-            const SizedBox(height: 10),
-            _RepeatButton(entry: entry),
-          ],
         ],
       ),
     );
@@ -185,72 +135,6 @@ class _Row extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _PendingTimer extends StatefulWidget {
-  const _PendingTimer({required this.since});
-  final DateTime since;
-
-  @override
-  State<_PendingTimer> createState() => _PendingTimerState();
-}
-
-class _PendingTimerState extends State<_PendingTimer> {
-  late final Stream<Duration> _stream;
-
-  @override
-  void initState() {
-    super.initState();
-    _stream = Stream<Duration>.multi((c) async {
-      c.add(DateTime.now().difference(widget.since));
-      await for (final _ in Stream.periodic(const Duration(minutes: 1))) {
-        c.add(DateTime.now().difference(widget.since));
-      }
-    });
-  }
-
-  String _format(Duration d) {
-    if (d.inHours >= 1) return '${d.inHours} ч ${d.inMinutes.remainder(60)} мин';
-    return '${d.inMinutes} мин';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<Duration>(
-      stream: _stream,
-      builder: (context, snap) {
-        final elapsed = snap.data ?? DateTime.now().difference(widget.since);
-        final isLong = elapsed.inHours >= 4;
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: (isLong ? const Color(0xFFDC3545) : BahandiColors.orange)
-                .withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.schedule,
-                size: 11,
-                color: isLong ? const Color(0xFFDC3545) : BahandiColors.orange,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                _format(elapsed),
-                style: GoogleFonts.golosText(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: isLong ? const Color(0xFFDC3545) : BahandiColors.orange,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }
