@@ -139,20 +139,20 @@ class _NewWriteoffScreenState extends State<NewWriteoffScreen> {
     await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
 
-    final withholdingNote = _withholding ? '[С удержанием]' : '[Без удержания]';
-    final baseComment = _commentController.text;
-    final overrideNote = _overrodeAi && _overrideReasonController.text.isNotEmpty
-        ? ' — Причина: ${_overrideReasonController.text}'
-        : '';
     final entry = WriteOffEntry(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       product: _product ?? '',
       quantity: _quantityController.text,
       unit: _type == WriteoffType.shtuchny ? 'шт' : 'г',
       reason: _reason ?? '',
-      comment: '$withholdingNote${baseComment.isNotEmpty ? ' $baseComment' : ''}$overrideNote',
+      comment: _commentController.text.trim(),
       submittedAt: DateTime.now(),
       status: 'pending',
+      writeOffType: _withholding ? 'with_deduction' : 'no_deduction',
+      aiSuggestedType: !_overrodeAi,
+      overrideExplanation: _overrodeAi && _overrideReasonController.text.isNotEmpty
+          ? _overrideReasonController.text.trim()
+          : null,
     );
     await context.read<WriteOffStore>().add(entry);
     if (!mounted) return;
@@ -251,7 +251,7 @@ class _NewWriteoffScreenState extends State<NewWriteoffScreen> {
 
   bool _canProceed() => switch (_step) {
         0 => _product != null && _quantityController.text.isNotEmpty,
-        1 => _reason != null,
+        1 => _reason != null && _commentController.text.trim().length >= 10,
         2 => _type == WriteoffType.vesovoy || _photo != null,
         _ => false,
       };
@@ -304,41 +304,86 @@ class _StepProduct extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionLabel('Тип товара'),
-        const SizedBox(height: 8),
-        _SegmentedToggle(
-          options: const ['Штучный', 'Весовой'],
-          selected: type == WriteoffType.shtuchny ? 0 : 1,
-          onChanged: (i) => onTypeChanged(i == 0 ? WriteoffType.shtuchny : WriteoffType.vesovoy),
-        ),
-        const SizedBox(height: 24),
         _SectionLabel('Продукт'),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          initialValue: product,
-          hint: const Text('Выберите продукт'),
-          decoration: const InputDecoration(),
-          items: _products
-              .map((p) => DropdownMenuItem(value: p, child: Text(p)))
-              .toList(),
-          onChanged: onProductChanged,
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _products.map((p) {
+            final selected = product == p;
+            return GestureDetector(
+              onTap: () => onProductChanged(p),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? BahandiColors.green.withValues(alpha: 0.10)
+                      : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: selected ? BahandiColors.green : BahandiColors.cardBorder,
+                    width: selected ? 1.5 : 1,
+                  ),
+                ),
+                child: Text(
+                  p,
+                  style: GoogleFonts.golosText(
+                    fontSize: 14,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                    color: selected ? BahandiColors.green : BahandiColors.charcoal,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
         ),
         const SizedBox(height: 24),
-        _SectionLabel(type == WriteoffType.shtuchny ? 'Количество (штук)' : 'Масса (граммы)'),
-        const SizedBox(height: 8),
-        TextField(
-          controller: quantity,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            suffixText: type == WriteoffType.shtuchny ? 'шт' : 'г',
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SectionLabel(
+                    type == WriteoffType.shtuchny ? 'Количество (штук)' : 'Масса (граммы)',
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: quantity,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      suffixText: type == WriteoffType.shtuchny ? 'шт' : 'г',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SectionLabel('Тип'),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: 96,
+                  child: _SegmentedToggle(
+                    options: const ['шт', 'г'],
+                    selected: type == WriteoffType.shtuchny ? 0 : 1,
+                    onChanged: (i) =>
+                        onTypeChanged(i == 0 ? WriteoffType.shtuchny : WriteoffType.vesovoy),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ],
     );
   }
 }
 
-class _StepReason extends StatelessWidget {
+class _StepReason extends StatefulWidget {
   const _StepReason({
     required this.reason,
     required this.comment,
@@ -349,6 +394,30 @@ class _StepReason extends StatelessWidget {
   final ValueChanged<String?> onReasonChanged;
 
   @override
+  State<_StepReason> createState() => _StepReasonState();
+}
+
+class _StepReasonState extends State<_StepReason> {
+  int _charCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _charCount = widget.comment.text.length;
+    widget.comment.addListener(_onCommentChange);
+  }
+
+  void _onCommentChange() {
+    setState(() => _charCount = widget.comment.text.trim().length);
+  }
+
+  @override
+  void dispose() {
+    widget.comment.removeListener(_onCommentChange);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -356,9 +425,9 @@ class _StepReason extends StatelessWidget {
         _SectionLabel('Причина списания'),
         const SizedBox(height: 12),
         ..._reasonCodes.map((code) {
-          final selected = reason == code;
+          final selected = widget.reason == code;
           return GestureDetector(
-            onTap: () => onReasonChanged(code),
+            onTap: () => widget.onReasonChanged(code),
             child: Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -388,12 +457,30 @@ class _StepReason extends StatelessWidget {
           );
         }),
         const SizedBox(height: 24),
-        _SectionLabel('Комментарий (необязательно)'),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _SectionLabel('Комментарий (обязательно)'),
+            Text(
+              '$_charCount/10',
+              style: GoogleFonts.golosText(
+                fontSize: 12,
+                color: _charCount >= 10 ? BahandiColors.green : BahandiColors.muted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 8),
         TextField(
-          controller: comment,
+          controller: widget.comment,
           maxLines: 3,
-          decoration: const InputDecoration(hintText: 'Дополнительные детали...'),
+          decoration: InputDecoration(
+            hintText: 'Опишите причину списания (мин. 10 символов)...',
+            errorText: _charCount > 0 && _charCount < 10
+                ? 'Минимум 10 символов'
+                : null,
+          ),
         ),
       ],
     );

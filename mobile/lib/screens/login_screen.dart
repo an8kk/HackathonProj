@@ -18,8 +18,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
   String? _error;
 
-  static const _validCredentials = {'1001': '1234', '1002': '0000', '1003': '1111'};
-
   Future<void> _login() async {
     final id = _idController.text.trim();
     final pin = _pinController.text.trim();
@@ -28,11 +26,9 @@ class _LoginScreenState extends State<LoginScreen> {
       _loading = true;
       _error = null;
     });
-    await Future.delayed(const Duration(milliseconds: 600));
+    final user = await context.read<AuthStore>().login(id, pin);
     if (!mounted) return;
-    if (_validCredentials[id] == pin) {
-      await context.read<AuthStore>().login();
-      if (!mounted) return;
+    if (user != null) {
       context.go('/dashboard');
     } else {
       setState(() {
@@ -133,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'Демо: ID 1001, PIN 1234',
+                        'Демо: ID 1001 / PIN 1234  ·  ID 1002 / PIN 2222',
                         style: GoogleFonts.golosText(
                           fontSize: 12,
                           color: BahandiColors.muted,
