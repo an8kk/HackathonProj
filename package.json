@@ -1,0 +1,18 @@
+{
+  "name": "hackathon-proj",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "docker compose up --build",
+    "test": "npm run test --workspaces",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
