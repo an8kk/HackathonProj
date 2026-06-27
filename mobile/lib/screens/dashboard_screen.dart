@@ -117,12 +117,32 @@ class DashboardScreen extends StatelessWidget {
           SliverAppBar(
             floating: true,
             pinned: true,
-            title: Text(
-              'Bahandi Reporter',
-              style: GoogleFonts.golosText(
-                fontWeight: FontWeight.w700,
-                color: BahandiColors.charcoal,
-              ),
+            title: Row(
+              children: [
+                Text(
+                  'Bahandi Reporter',
+                  style: GoogleFonts.golosText(
+                    fontWeight: FontWeight.w700,
+                    color: BahandiColors.charcoal,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: BahandiColors.green,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'v2',
+                    style: GoogleFonts.golosText(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
             ),
             actions: [
               IconButton(
