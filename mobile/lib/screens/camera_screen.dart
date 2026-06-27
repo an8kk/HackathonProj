@@ -220,7 +220,7 @@ class _ConfirmScreenState extends State<_ConfirmScreen> {
   late String _reason;
   late String _quantity;
   late String _condition;
-  bool _withholding = false;
+  bool _withholding = true;
   bool _overrodeAi = false;
   final _overrideReasonController = TextEditingController();
 

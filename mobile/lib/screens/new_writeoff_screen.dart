@@ -62,8 +62,11 @@ class _NewWriteoffScreenState extends State<NewWriteoffScreen> {
   Uint8List? _photoBytes;
   bool _submitting = false;
 
-  // Write-off charge type: false = without withholding (AI default), true = with withholding
-  bool _withholding = false;
+  // Default to with_deduction until AI photo analysis overrides it.
+  // AI response shape: { is_food_waste, detected_product, condition,
+  //   suggested_reason, suggested_write_off_type, confidence, warning }
+  bool _withholding = true;
+  bool _aiSetType = false; // true once AI has set the type from photo
   bool _overrodeAi = false;
   final _overrideReasonController = TextEditingController();
 
@@ -84,6 +87,12 @@ class _NewWriteoffScreenState extends State<NewWriteoffScreen> {
       final detectedProduct = analysis['detected_product'] as String?;
       if (detectedProduct != null) {
         _product = _fuzzyMatchProduct(detectedProduct);
+      }
+      // AI overrides the default withholding type when it has an opinion
+      final suggestedType = analysis['suggested_write_off_type'] as String?;
+      if (suggestedType != null) {
+        _withholding = suggestedType == 'with_deduction';
+        _aiSetType = true;
       }
     }
     if (widget.prefill != null) {
@@ -149,7 +158,7 @@ class _NewWriteoffScreenState extends State<NewWriteoffScreen> {
       submittedAt: DateTime.now(),
       status: 'pending',
       writeOffType: _withholding ? 'with_deduction' : 'no_deduction',
-      aiSuggestedType: !_overrodeAi,
+      aiSuggestedType: _aiSetType && !_overrodeAi,
       overrideExplanation: _overrodeAi && _overrideReasonController.text.isNotEmpty
           ? _overrideReasonController.text.trim()
           : null,
@@ -251,7 +260,7 @@ class _NewWriteoffScreenState extends State<NewWriteoffScreen> {
 
   bool _canProceed() => switch (_step) {
         0 => _product != null && _quantityController.text.isNotEmpty,
-        1 => _reason != null && _commentController.text.trim().length >= 10,
+        1 => _reason != null && _commentController.text.trim().isNotEmpty,
         2 => _type == WriteoffType.vesovoy || _photo != null,
         _ => false,
       };
@@ -398,30 +407,23 @@ class _StepReason extends StatefulWidget {
 }
 
 class _StepReasonState extends State<_StepReason> {
-  int _charCount = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _charCount = widget.comment.text.length;
-    widget.comment.addListener(_onCommentChange);
-  }
-
-  void _onCommentChange() {
-    setState(() => _charCount = widget.comment.text.trim().length);
-  }
-
-  @override
-  void dispose() {
-    widget.comment.removeListener(_onCommentChange);
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Comment first — user types what happened, then picks the category
+        _SectionLabel('Комментарий'),
+        const SizedBox(height: 8),
+        TextField(
+          controller: widget.comment,
+          maxLines: 3,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Что случилось с продуктом?',
+          ),
+        ),
+        const SizedBox(height: 24),
         _SectionLabel('Причина списания'),
         const SizedBox(height: 12),
         ..._reasonCodes.map((code) {
@@ -450,38 +452,13 @@ class _StepReasonState extends State<_StepReason> {
                       ),
                     ),
                   ),
-                  if (selected) const Icon(Icons.check_circle, color: BahandiColors.green, size: 20),
+                  if (selected)
+                    const Icon(Icons.check_circle, color: BahandiColors.green, size: 20),
                 ],
               ),
             ),
           );
         }),
-        const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _SectionLabel('Комментарий (обязательно)'),
-            Text(
-              '$_charCount/10',
-              style: GoogleFonts.golosText(
-                fontSize: 12,
-                color: _charCount >= 10 ? BahandiColors.green : BahandiColors.muted,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: widget.comment,
-          maxLines: 3,
-          decoration: InputDecoration(
-            hintText: 'Опишите причину списания (мин. 10 символов)...',
-            errorText: _charCount > 0 && _charCount < 10
-                ? 'Минимум 10 символов'
-                : null,
-          ),
-        ),
       ],
     );
   }
