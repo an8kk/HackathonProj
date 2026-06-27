@@ -1,4 +1,5 @@
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 const fsdAliases = {
@@ -11,7 +12,7 @@ const fsdAliases = {
 };
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: fsdAliases
   },
