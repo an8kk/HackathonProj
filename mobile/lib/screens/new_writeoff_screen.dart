@@ -1,8 +1,10 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import '../store/write_off_store.dart';
 import '../theme.dart';
 
 enum WriteoffType { shtuchny, vesovoy }
@@ -34,7 +36,14 @@ const _products = [
 ];
 
 class NewWriteoffScreen extends StatefulWidget {
-  const NewWriteoffScreen({super.key});
+  const NewWriteoffScreen({
+    super.key,
+    this.initialPhotoPath,
+    this.initialAnalysis,
+  });
+
+  final String? initialPhotoPath;
+  final Map<String, dynamic>? initialAnalysis;
 
   @override
   State<NewWriteoffScreen> createState() => _NewWriteoffScreenState();
@@ -47,24 +56,87 @@ class _NewWriteoffScreenState extends State<NewWriteoffScreen> {
   final _quantityController = TextEditingController();
   String? _reason;
   final _commentController = TextEditingController();
-  File? _photo;
+  XFile? _photo;
+  Uint8List? _photoBytes;
   bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialPhotoPath != null) {
+      _photo = XFile(widget.initialPhotoPath!);
+      _photo!.readAsBytes().then((bytes) {
+        if (mounted) {
+          setState(() => _photoBytes = bytes);
+        }
+      });
+    }
+    if (widget.initialAnalysis != null) {
+      final analysis = widget.initialAnalysis!;
+      _reason = _mapAnalysisReason(analysis['suggested_reason'] as String?);
+      final detectedProduct = analysis['detected_product'] as String?;
+      if (detectedProduct != null) {
+        _product = _fuzzyMatchProduct(detectedProduct);
+      }
+    }
+  }
+
+  String? _mapAnalysisReason(String? suggested) {
+    if (suggested == null) return null;
+    final lower = suggested.toLowerCase();
+    if (lower.contains('damaged') || lower.contains('damage')) return 'DAMAGED';
+    if (lower.contains('expired') || lower.contains('expire')) return 'EXPIRED';
+    if (lower.contains('overcooked') || lower.contains('quality')) return 'OVERCOOKED';
+    if (lower.contains('raw') || lower.contains('waste')) return 'RAW_WASTE';
+    if (lower.contains('other')) return 'OTHER';
+    return null;
+  }
+
+  String? _fuzzyMatchProduct(String detected) {
+    final lower = detected.toLowerCase();
+    for (final p in _products) {
+      if (p.toLowerCase().contains(lower) || lower.contains(p.toLowerCase())) {
+        return p;
+      }
+    }
+    return null;
+  }
 
   Future<void> _pickPhoto() async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
       source: ImageSource.camera,
       imageQuality: 85,
+      maxWidth: 1280,
     );
-    if (picked != null) setState(() => _photo = File(picked.path));
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      _photo = picked;
+      _photoBytes = bytes;
+    });
   }
 
   Future<void> _submit() async {
     setState(() => _submitting = true);
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
-    // TODO: POST to /write-offs
-    context.go('/dashboard');
+
+    final entry = WriteOffEntry(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      product: _product ?? '',
+      quantity: _quantityController.text,
+      unit: _type == WriteoffType.shtuchny ? 'шт' : 'г',
+      reason: _reason ?? '',
+      comment: _commentController.text,
+      submittedAt: DateTime.now(),
+      status: 'pending',
+    );
+    await context.read<WriteOffStore>().add(entry);
+    if (!mounted) return;
+
+    context.go('/success', extra: entry);
   }
 
   @override
@@ -110,10 +182,15 @@ class _NewWriteoffScreenState extends State<NewWriteoffScreen> {
                     comment: _commentController,
                     onReasonChanged: (r) => setState(() => _reason = r),
                   ),
-                2 => _StepPhoto(
+                2 => _StepConfirm(
                     photo: _photo,
+                    photoBytes: _photoBytes,
                     onPickPhoto: _pickPhoto,
                     type: _type,
+                    product: _product,
+                    quantity: _quantityController.text,
+                    reason: _reason,
+                    comment: _commentController.text,
                   ),
                 _ => const SizedBox(),
               },
@@ -139,7 +216,7 @@ class _NewWriteoffScreenState extends State<NewWriteoffScreen> {
   String _stepTitle() => switch (_step) {
         0 => 'Товар',
         1 => 'Причина',
-        2 => 'Фото и подтверждение',
+        2 => 'Подтверждение',
         _ => '',
       };
 
@@ -209,7 +286,7 @@ class _StepProduct extends StatelessWidget {
         _SectionLabel('Продукт'),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: product,
+          initialValue: product,
           hint: const Text('Выберите продукт'),
           decoration: const InputDecoration(),
           items: _products
@@ -294,29 +371,98 @@ class _StepReason extends StatelessWidget {
   }
 }
 
-class _StepPhoto extends StatelessWidget {
-  const _StepPhoto({
+class _StepConfirm extends StatelessWidget {
+  const _StepConfirm({
     required this.photo,
+    required this.photoBytes,
     required this.onPickPhoto,
     required this.type,
+    required this.product,
+    required this.quantity,
+    required this.reason,
+    required this.comment,
   });
-  final File? photo;
+
+  final XFile? photo;
+  final Uint8List? photoBytes;
   final VoidCallback onPickPhoto;
   final WriteoffType type;
+  final String? product;
+  final String quantity;
+  final String? reason;
+  final String comment;
 
   @override
   Widget build(BuildContext context) {
+    final photoRequired = type == WriteoffType.shtuchny;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionLabel(
-          type == WriteoffType.shtuchny ? 'Фото (обязательно)' : 'Фото (необязательно)',
+        // Summary card
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: BahandiColors.cardBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Данные заявки',
+                style: GoogleFonts.golosText(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: BahandiColors.charcoal,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1, color: BahandiColors.cardBorder),
+              const SizedBox(height: 12),
+              _SummaryRow(
+                icon: Icons.inventory_2_outlined,
+                label: 'Продукт',
+                value: product ?? '—',
+              ),
+              const SizedBox(height: 10),
+              _SummaryRow(
+                icon: type == WriteoffType.shtuchny
+                    ? Icons.tag
+                    : Icons.monitor_weight_outlined,
+                label: type == WriteoffType.shtuchny ? 'Количество' : 'Масса',
+                value: '$quantity ${type == WriteoffType.shtuchny ? 'шт' : 'г'}',
+              ),
+              const SizedBox(height: 10),
+              _SummaryRow(
+                icon: Icons.info_outline,
+                label: 'Причина',
+                value: _reasonLabels[reason] ?? '—',
+              ),
+              if (comment.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                _SummaryRow(
+                  icon: Icons.chat_bubble_outline,
+                  label: 'Комментарий',
+                  value: comment,
+                ),
+              ],
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
+
+        const SizedBox(height: 20),
+
+        // Photo section
+        _SectionLabel(photoRequired ? 'Фото (обязательно)' : 'Фото (необязательно)'),
+        const SizedBox(height: 10),
+
         GestureDetector(
           onTap: onPickPhoto,
           child: Container(
-            height: 220,
+            height: 200,
             decoration: BoxDecoration(
               color: BahandiColors.surface,
               borderRadius: BorderRadius.circular(16),
@@ -325,50 +471,128 @@ class _StepPhoto extends StatelessWidget {
                 width: photo != null ? 1.5 : 1,
               ),
             ),
-            child: photo != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(15),
-                    child: Image.file(photo!, fit: BoxFit.cover, width: double.infinity),
+            child: photo != null && photoBytes != null
+                ? Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(15),
+                        child: Image.memory(photoBytes!, fit: BoxFit.cover),
+                      ),
+                      Positioned(
+                        bottom: 8,
+                        right: 8,
+                        child: GestureDetector(
+                          onTap: onPickPhoto,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.6),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.refresh, color: Colors.white, size: 14),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Переснять',
+                                  style: GoogleFonts.golosText(color: Colors.white, fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   )
                 : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.camera_alt_outlined, size: 48, color: BahandiColors.muted.withValues(alpha: 0.6)),
-                      const SizedBox(height: 12),
+                      Icon(
+                        Icons.camera_alt_outlined,
+                        size: 44,
+                        color: BahandiColors.muted.withValues(alpha: 0.5),
+                      ),
+                      const SizedBox(height: 10),
                       Text(
                         'Нажмите, чтобы сфотографировать',
-                        style: GoogleFonts.golosText(color: BahandiColors.muted, fontSize: 14),
+                        style: GoogleFonts.golosText(
+                          color: BahandiColors.muted,
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   ),
           ),
         ),
-        if (photo != null) ...[
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: onPickPhoto,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Переснять'),
-          ),
-        ],
-        const SizedBox(height: 24),
+
+        const SizedBox(height: 20),
+
+        // Warning banner
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: BahandiColors.surface,
+            color: BahandiColors.orange.withValues(alpha: 0.07),
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: BahandiColors.orange.withValues(alpha: 0.2)),
           ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.lock_outline, size: 18, color: BahandiColors.orange),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Отправленную заявку нельзя изменить или удалить. Проверьте данные перед отправкой.',
+                  style: GoogleFonts.golosText(
+                    fontSize: 13,
+                    color: BahandiColors.orange,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SummaryRow extends StatelessWidget {
+  const _SummaryRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: BahandiColors.muted),
+        const SizedBox(width: 10),
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Проверьте данные перед отправкой',
-                style: GoogleFonts.golosText(fontWeight: FontWeight.w600, fontSize: 14),
+                label,
+                style: GoogleFonts.golosText(fontSize: 11, color: BahandiColors.muted),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 1),
               Text(
-                'Отправленную заявку нельзя изменить или удалить.',
-                style: GoogleFonts.golosText(fontSize: 13, color: BahandiColors.muted),
+                value,
+                style: GoogleFonts.golosText(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: BahandiColors.charcoal,
+                ),
               ),
             ],
           ),

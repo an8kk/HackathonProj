@@ -24,7 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
     await Future.delayed(const Duration(milliseconds: 600));
     if (!mounted) return;
     // TODO: replace with real API call to POST /auth/login
-    if (_pinController.text == '1234') {
+    if (['1234', '0000', '1111'].contains(_pinController.text)) {
       context.go('/dashboard');
     } else {
       setState(() {
@@ -103,7 +103,18 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: const TextStyle(color: Colors.red, fontSize: 13),
                       ),
                     ],
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Демо: введите 1234',
+                        style: GoogleFonts.golosText(
+                          fontSize: 12,
+                          color: BahandiColors.muted,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
