@@ -33,6 +33,7 @@ final router = GoRouter(
             return NewWriteoffScreen(
               initialPhotoPath: extra?['photoPath'] as String?,
               initialAnalysis: extra?['analysis'] as Map<String, dynamic>?,
+              prefill: extra?['prefill'] as Map<String, dynamic>?,
             );
           },
         ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../store/write_off_store.dart';
@@ -133,13 +134,23 @@ class _HistoryCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 10),
-          Text(
-            '$dateLabel в $timeLabel',
-            style: GoogleFonts.golosText(
-              fontSize: 12,
-              color: BahandiColors.muted,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '$dateLabel в $timeLabel',
+                style: GoogleFonts.golosText(
+                  fontSize: 12,
+                  color: BahandiColors.muted,
+                ),
+              ),
+              if (entry.status == 'pending') _PendingTimer(since: entry.submittedAt),
+            ],
           ),
+          if (entry.status != 'pending') ...[
+            const SizedBox(height: 10),
+            _RepeatButton(entry: entry),
+          ],
         ],
       ),
     );
@@ -174,6 +185,117 @@ class _Row extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _PendingTimer extends StatefulWidget {
+  const _PendingTimer({required this.since});
+  final DateTime since;
+
+  @override
+  State<_PendingTimer> createState() => _PendingTimerState();
+}
+
+class _PendingTimerState extends State<_PendingTimer> {
+  late final Stream<Duration> _stream;
+
+  @override
+  void initState() {
+    super.initState();
+    _stream = Stream<Duration>.multi((c) async {
+      c.add(DateTime.now().difference(widget.since));
+      await for (final _ in Stream.periodic(const Duration(minutes: 1))) {
+        c.add(DateTime.now().difference(widget.since));
+      }
+    });
+  }
+
+  String _format(Duration d) {
+    if (d.inHours >= 1) return '${d.inHours} ч ${d.inMinutes.remainder(60)} мин';
+    return '${d.inMinutes} мин';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<Duration>(
+      stream: _stream,
+      builder: (context, snap) {
+        final elapsed = snap.data ?? DateTime.now().difference(widget.since);
+        final isLong = elapsed.inHours >= 4;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: (isLong ? const Color(0xFFDC3545) : BahandiColors.orange)
+                .withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.schedule,
+                size: 11,
+                color: isLong ? const Color(0xFFDC3545) : BahandiColors.orange,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                _format(elapsed),
+                style: GoogleFonts.golosText(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isLong ? const Color(0xFFDC3545) : BahandiColors.orange,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _RepeatButton extends StatelessWidget {
+  const _RepeatButton({required this.entry});
+  final WriteOffEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        context.go('/new', extra: {
+          'prefill': {
+            'product': entry.product,
+            'quantity': entry.quantity,
+            'unit': entry.unit,
+            'reason': entry.reason,
+            'comment': entry.comment,
+          },
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: BahandiColors.green.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: BahandiColors.green.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.refresh, size: 14, color: BahandiColors.green),
+            const SizedBox(width: 6),
+            Text(
+              'Повторить заявку',
+              style: GoogleFonts.golosText(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: BahandiColors.green,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

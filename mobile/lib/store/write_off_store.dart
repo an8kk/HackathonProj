@@ -61,6 +61,20 @@ class WriteOffStore extends ChangeNotifier {
   List<WriteOffEntry> get recent =>
       _entries.reversed.take(3).toList();
 
+  WriteOffEntry? get lastEntry =>
+      _entries.isEmpty ? null : _entries.last;
+
+  /// True if 3+ write-offs were submitted within any 10-minute window.
+  bool get hasSuspiciousCluster {
+    if (_entries.length < 3) return false;
+    final sorted = [..._entries]..sort((a, b) => a.submittedAt.compareTo(b.submittedAt));
+    for (var i = 0; i <= sorted.length - 3; i++) {
+      final window = sorted[i + 2].submittedAt.difference(sorted[i].submittedAt);
+      if (window.inMinutes < 10) return true;
+    }
+    return false;
+  }
+
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_key);

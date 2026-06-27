@@ -40,10 +40,12 @@ class NewWriteoffScreen extends StatefulWidget {
     super.key,
     this.initialPhotoPath,
     this.initialAnalysis,
+    this.prefill,
   });
 
   final String? initialPhotoPath;
   final Map<String, dynamic>? initialAnalysis;
+  final Map<String, dynamic>? prefill;
 
   @override
   State<NewWriteoffScreen> createState() => _NewWriteoffScreenState();
@@ -78,6 +80,15 @@ class _NewWriteoffScreenState extends State<NewWriteoffScreen> {
       if (detectedProduct != null) {
         _product = _fuzzyMatchProduct(detectedProduct);
       }
+    }
+    if (widget.prefill != null) {
+      final p = widget.prefill!;
+      _product = p['product'] as String?;
+      _reason = p['reason'] as String?;
+      _quantityController.text = (p['quantity'] as String?) ?? '';
+      _commentController.text = (p['comment'] as String?) ?? '';
+      final unit = p['unit'] as String?;
+      if (unit == 'г') _type = WriteoffType.vesovoy;
     }
   }
 

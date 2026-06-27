@@ -142,6 +142,10 @@ class DashboardScreen extends StatelessWidget {
                     approvedCount: store.approvedCount,
                     startLabel: startLabel,
                   ),
+                  if (store.hasSuspiciousCluster) ...[
+                    const SizedBox(height: 12),
+                    const _SuspiciousClusterBanner(),
+                  ],
                   const SizedBox(height: 16),
                   _QuickAction(onTap: () => context.go('/new')),
                   const SizedBox(height: 24),
@@ -383,6 +387,53 @@ class _WriteOffCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SuspiciousClusterBanner extends StatelessWidget {
+  const _SuspiciousClusterBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFDC3545).withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFDC3545).withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.warning_amber_rounded, size: 18, color: Color(0xFFDC3545)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Подозрительная активность',
+                  style: GoogleFonts.golosText(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFDC3545),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '3 или более заявок за 10 минут — супервайзер будет уведомлён',
+                  style: GoogleFonts.golosText(
+                    fontSize: 12,
+                    color: const Color(0xFFDC3545),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
