@@ -22,6 +22,7 @@ services:
     environment:
       BACKEND_PORT: ${BACKEND_PORT:-4000}
       DATABASE_URL: ${DATABASE_URL:-postgres://hackathon:hackathon@postgres:5432/hackathon}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
     ports:
       - "4000:4000"
     depends_on:

@@ -1,0 +1,248 @@
+.wo-section {
+  margin-top: 16px;
+  padding-bottom: 48px;
+}
+
+.wo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.wo-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-text, #2b2a28);
+}
+
+.wo-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.wo-filter-btn {
+  border: 1px solid var(--color-border-dark, #e8e8e8);
+  border-radius: 999px;
+  padding: 6px 14px;
+  background: var(--color-surface, #fefefe);
+  color: var(--color-muted, #999);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.wo-filter-btn:hover {
+  background: var(--color-surface-2, #f8f8f8);
+  color: var(--color-text, #2b2a28);
+}
+
+.wo-filter-btn.active {
+  background: var(--color-charcoal, #2b2a28);
+  color: #fff;
+  border-color: var(--color-charcoal, #2b2a28);
+}
+
+.wo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wo-state {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--color-muted, #999);
+  background: var(--color-surface, #fefefe);
+  border: 1px solid var(--color-border, #f3f3f3);
+  border-radius: 16px;
+  font-size: 14px;
+}
+
+.wo-state--error {
+  color: #c0392b;
+}
+
+.wo-card {
+  background: var(--color-surface, #fefefe);
+  border: 1px solid var(--color-border, #f3f3f3);
+  border-radius: 16px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.15s;
+}
+
+.wo-card:hover {
+  border-color: var(--color-border-dark, #e8e8e8);
+}
+
+.wo-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wo-card__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.wo-card__product {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text, #2b2a28);
+}
+
+.wo-card__qty {
+  font-size: 13px;
+  color: var(--color-muted, #999);
+  font-weight: 500;
+}
+
+.wo-card__details {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--color-muted, #999);
+  flex-wrap: wrap;
+}
+
+.wo-dot {
+  color: #d0d0d0;
+}
+
+.wo-card__time {
+  color: #bbb;
+}
+
+.wo-card__comment {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-muted, #999);
+  font-style: italic;
+}
+
+.wo-card__rejection {
+  margin: 0;
+  font-size: 13px;
+  color: #c0392b;
+  font-weight: 500;
+}
+
+/* ── Badges ── */
+
+.wo-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.wo-badge--pending {
+  background: #fff8e6;
+  color: #b45309;
+}
+
+.wo-badge--approved {
+  background: #e8f5ee;
+  color: #198754;
+}
+
+.wo-badge--rejected {
+  background: #fdecea;
+  color: #c0392b;
+}
+
+/* ── Actions ── */
+
+.wo-card__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.wo-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 9px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+  min-height: 40px;
+}
+
+.wo-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.wo-btn--approve {
+  background: var(--color-green, #198754);
+  color: #fff;
+}
+
+.wo-btn--approve:hover:not(:disabled) {
+  background: var(--color-green-dark, #0a6730);
+}
+
+.wo-btn--reject {
+  background: #fdecea;
+  color: #c0392b;
+  border: 1px solid #f5c6c2;
+}
+
+.wo-btn--reject:hover:not(:disabled) {
+  background: #f8d7d4;
+}
+
+.wo-btn--ghost {
+  background: var(--color-surface-2, #f8f8f8);
+  color: var(--color-text, #2b2a28);
+  border: 1px solid var(--color-border-dark, #e8e8e8);
+}
+
+.wo-btn--ghost:hover:not(:disabled) {
+  background: var(--color-border-dark, #e8e8e8);
+}
+
+.wo-reject-input {
+  flex: 1;
+  min-width: 180px;
+  border: 1px solid var(--color-border-dark, #e8e8e8);
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-size: 14px;
+  color: var(--color-text, #2b2a28);
+  background: #fff;
+  min-height: 40px;
+  transition: border-color 0.15s;
+}
+
+.wo-reject-input:focus {
+  outline: none;
+  border-color: var(--color-charcoal, #2b2a28);
+  border-width: 1.5px;
+}
+
+@media (max-width: 860px) {
+  .wo-section {
+    padding-bottom: 32px;
+  }
+}

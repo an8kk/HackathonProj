@@ -1,0 +1,142 @@
+.hs-header {
+  margin-bottom: 20px;
+}
+
+.hs-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text, #2b2a28);
+  letter-spacing: -0.02em;
+}
+
+.hs-sub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--color-muted, #999);
+}
+
+.hs-stats-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.hs-stat {
+  flex: 1;
+  min-width: 120px;
+  background: var(--color-surface, #fefefe);
+  border: 1px solid var(--color-border, #f3f3f3);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.hs-stat--green {
+  background: var(--color-green-light, #e8f5ee);
+  border-color: #b6dfc8;
+}
+
+.hs-stat--orange {
+  background: var(--color-orange-light, #fdf0e8);
+  border-color: #f5c9a8;
+}
+
+.hs-stat--red {
+  background: #fdecea;
+  border-color: #f5c6c2;
+}
+
+.hs-stat__val {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text, #2b2a28);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.hs-stat--green .hs-stat__val { color: var(--color-green, #198754); }
+.hs-stat--orange .hs-stat__val { color: var(--color-orange, #ea5e1f); }
+.hs-stat--red .hs-stat__val { color: #c0392b; }
+
+.hs-stat__label {
+  font-size: 12px;
+  color: var(--color-muted, #999);
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+.hs-stat__sub {
+  font-size: 11px;
+  color: var(--color-muted, #999);
+  margin-top: 2px;
+}
+
+/* ── History cards ── */
+
+.hs-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--color-surface, #fefefe);
+  border: 1px solid var(--color-border, #f3f3f3);
+  border-radius: 14px;
+  padding: 14px 18px;
+  list-style: none;
+  transition: border-color 0.15s;
+}
+
+.hs-card:hover {
+  border-color: var(--color-border-dark, #e8e8e8);
+}
+
+.hs-card__left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.hs-card__top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.hs-card__product {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text, #2b2a28);
+}
+
+.hs-card__qty {
+  font-size: 13px;
+  color: var(--color-muted, #999);
+}
+
+.hs-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--color-muted, #999);
+  flex-wrap: wrap;
+}
+
+.hs-card__time {
+  font-size: 12px;
+  color: #bbb;
+}
+
+.hs-card__reviewer {
+  color: var(--color-muted, #999);
+}
+
+.hs-card__rt {
+  color: var(--color-green, #198754);
+  font-weight: 500;
+}
