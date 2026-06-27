@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../store/auth_store.dart';
 import '../store/write_off_store.dart';
 import '../theme.dart';
 
@@ -79,9 +80,10 @@ void _showProfileSheet(BuildContext context) {
                   color: Colors.red,
                 ),
               ),
-              onTap: () {
+              onTap: () async {
                 Navigator.of(ctx).pop();
-                ctx.go('/login');
+                await ctx.read<AuthStore>().logout();
+                if (ctx.mounted) ctx.go('/login');
               },
             ),
           ],

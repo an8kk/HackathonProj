@@ -151,6 +151,13 @@ class WriteOffStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> clear() async {
+    _entries.clear();
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_key);
+  }
+
   Future<void> add(WriteOffEntry entry) async {
     _entries.add(entry);
     notifyListeners();

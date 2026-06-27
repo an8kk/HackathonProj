@@ -91,12 +91,19 @@ class _HistoryCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '$dateLabel в $timeLabel',
-                style: GoogleFonts.golosText(
-                  fontSize: 12,
-                  color: BahandiColors.muted,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$dateLabel в $timeLabel',
+                    style: GoogleFonts.golosText(
+                      fontSize: 12,
+                      color: BahandiColors.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  _StatusBadge(status: entry.status),
+                ],
               ),
               _RepeatButton(entry: entry),
             ],
@@ -135,6 +142,35 @@ class _Row extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.status});
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = switch (status) {
+      'approved' => ('Одобрено', BahandiColors.green),
+      'rejected' => ('Отклонено', const Color(0xFFDC3545)),
+      _ => ('На проверке', BahandiColors.orange),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.golosText(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
     );
   }
 }

@@ -62,6 +62,11 @@ class _NewWriteoffScreenState extends State<NewWriteoffScreen> {
   Uint8List? _photoBytes;
   bool _submitting = false;
 
+  // Write-off charge type: false = without withholding (AI default), true = with withholding
+  bool _withholding = false;
+  bool _overrodeAi = false;
+  final _overrideReasonController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -134,13 +139,18 @@ class _NewWriteoffScreenState extends State<NewWriteoffScreen> {
     await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
 
+    final withholdingNote = _withholding ? '[С удержанием]' : '[Без удержания]';
+    final baseComment = _commentController.text;
+    final overrideNote = _overrodeAi && _overrideReasonController.text.isNotEmpty
+        ? ' — Причина: ${_overrideReasonController.text}'
+        : '';
     final entry = WriteOffEntry(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       product: _product ?? '',
       quantity: _quantityController.text,
       unit: _type == WriteoffType.shtuchny ? 'шт' : 'г',
       reason: _reason ?? '',
-      comment: _commentController.text,
+      comment: '$withholdingNote${baseComment.isNotEmpty ? ' $baseComment' : ''}$overrideNote',
       submittedAt: DateTime.now(),
       status: 'pending',
     );
@@ -154,6 +164,7 @@ class _NewWriteoffScreenState extends State<NewWriteoffScreen> {
   void dispose() {
     _quantityController.dispose();
     _commentController.dispose();
+    _overrideReasonController.dispose();
     super.dispose();
   }
 
@@ -202,6 +213,13 @@ class _NewWriteoffScreenState extends State<NewWriteoffScreen> {
                     quantity: _quantityController.text,
                     reason: _reason,
                     comment: _commentController.text,
+                    withholding: _withholding,
+                    overrodeAi: _overrodeAi,
+                    overrideReasonController: _overrideReasonController,
+                    onWithholdingChanged: (val, overrode) => setState(() {
+                      _withholding = val;
+                      _overrodeAi = overrode;
+                    }),
                   ),
                 _ => const SizedBox(),
               },
@@ -392,6 +410,10 @@ class _StepConfirm extends StatelessWidget {
     required this.quantity,
     required this.reason,
     required this.comment,
+    required this.withholding,
+    required this.overrodeAi,
+    required this.overrideReasonController,
+    required this.onWithholdingChanged,
   });
 
   final XFile? photo;
@@ -402,6 +424,10 @@ class _StepConfirm extends StatelessWidget {
   final String quantity;
   final String? reason;
   final String comment;
+  final bool withholding;
+  final bool overrodeAi;
+  final TextEditingController overrideReasonController;
+  final void Function(bool withholding, bool overrode) onWithholdingChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -462,6 +488,15 @@ class _StepConfirm extends StatelessWidget {
               ],
             ],
           ),
+        ),
+
+        const SizedBox(height: 16),
+
+        _WriteOffTypeBanner(
+          withholding: withholding,
+          overrodeAi: overrodeAi,
+          overrideReasonController: overrideReasonController,
+          onChanged: onWithholdingChanged,
         ),
 
         const SizedBox(height: 20),
@@ -566,6 +601,140 @@ class _StepConfirm extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _WriteOffTypeBanner extends StatelessWidget {
+  const _WriteOffTypeBanner({
+    required this.withholding,
+    required this.overrodeAi,
+    required this.overrideReasonController,
+    required this.onChanged,
+  });
+
+  final bool withholding;
+  final bool overrodeAi;
+  final TextEditingController overrideReasonController;
+  final void Function(bool withholding, bool overrode) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: BahandiColors.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Тип списания',
+                style: GoogleFonts.golosText(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: BahandiColors.charcoal,
+                ),
+              ),
+              const SizedBox(width: 6),
+              if (!overrodeAi)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: BahandiColors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '✨ Предложено ИИ',
+                    style: GoogleFonts.golosText(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: BahandiColors.green,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _TypeChip(
+                label: 'Без удержания',
+                selected: !withholding,
+                onTap: () => onChanged(false, false),
+              ),
+              const SizedBox(width: 8),
+              _TypeChip(
+                label: 'С удержанием',
+                selected: withholding,
+                onTap: () => onChanged(true, true),
+              ),
+            ],
+          ),
+          if (overrodeAi) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: overrideReasonController,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                hintText: 'Причина изменения предложения ИИ...',
+              ),
+            ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () => onChanged(false, false),
+              child: Text(
+                'Вернуть предложение ИИ',
+                style: GoogleFonts.golosText(
+                  fontSize: 13,
+                  color: BahandiColors.green,
+                  fontWeight: FontWeight.w600,
+                  decoration: TextDecoration.underline,
+                  decorationColor: BahandiColors.green,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TypeChip extends StatelessWidget {
+  const _TypeChip({required this.label, required this.selected, required this.onTap});
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? BahandiColors.green : BahandiColors.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? BahandiColors.green : BahandiColors.cardBorder,
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.golosText(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : BahandiColors.charcoal,
+          ),
+        ),
+      ),
     );
   }
 }

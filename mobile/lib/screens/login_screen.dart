@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../store/auth_store.dart';
 import '../theme.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -11,31 +13,41 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _idController = TextEditingController();
   final _pinController = TextEditingController();
   bool _loading = false;
   String? _error;
 
+  static const _validCredentials = {'1001': '1234', '1002': '0000', '1003': '1111'};
+
   Future<void> _login() async {
-    if (_pinController.text.isEmpty) return;
+    final id = _idController.text.trim();
+    final pin = _pinController.text.trim();
+    if (id.isEmpty || pin.isEmpty) return;
     setState(() {
       _loading = true;
       _error = null;
     });
     await Future.delayed(const Duration(milliseconds: 600));
     if (!mounted) return;
-    // TODO: replace with real API call to POST /auth/login
-    if (['1234', '0000', '1111'].contains(_pinController.text)) {
+    if (_validCredentials[id] == pin) {
+      await context.read<AuthStore>().login();
+      if (!mounted) return;
       context.go('/dashboard');
     } else {
       setState(() {
         _loading = false;
-        _error = 'Неверный PIN-код';
+        _error = 'Неверный ID сотрудника или PIN-код';
       });
     }
   }
 
+  bool get _canLogin =>
+      _idController.text.trim().isNotEmpty && _pinController.text.trim().isNotEmpty;
+
   @override
   void dispose() {
+    _idController.dispose();
     _pinController.dispose();
     super.dispose();
   }
@@ -67,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Введите ваш PIN-код для входа',
+                  'Введите ID сотрудника и PIN-код',
                   style: GoogleFonts.golosText(
                     fontSize: 15,
                     color: BahandiColors.muted,
@@ -85,11 +97,25 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   children: [
                     TextField(
+                      controller: _idController,
+                      keyboardType: TextInputType.number,
+                      maxLength: 10,
+                      textInputAction: TextInputAction.next,
+                      onChanged: (_) => setState(() {}),
+                      decoration: const InputDecoration(
+                        labelText: 'ID сотрудника',
+                        counterText: '',
+                        prefixIcon: Icon(Icons.badge_outlined, color: BahandiColors.muted),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
                       controller: _pinController,
                       keyboardType: TextInputType.number,
                       obscureText: true,
                       maxLength: 6,
-                      onSubmitted: (_) => _login(),
+                      onChanged: (_) => setState(() {}),
+                      onSubmitted: (_) => _canLogin && !_loading ? _login() : null,
                       decoration: const InputDecoration(
                         labelText: 'PIN-код',
                         counterText: '',
@@ -107,7 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'Демо: введите 1234',
+                        'Демо: ID 1001, PIN 1234',
                         style: GoogleFonts.golosText(
                           fontSize: 12,
                           color: BahandiColors.muted,
@@ -118,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _loading ? null : _login,
+                        onPressed: (_canLogin && !_loading) ? _login : null,
                         child: _loading
                             ? const SizedBox(
                                 height: 20,

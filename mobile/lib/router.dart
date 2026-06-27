@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/new_writeoff_screen.dart';
@@ -6,10 +7,18 @@ import 'screens/history_screen.dart';
 import 'screens/camera_screen.dart';
 import 'screens/success_screen.dart';
 import 'store/write_off_store.dart';
+import 'store/auth_store.dart';
 import 'widgets/scaffold_with_nav.dart';
 
 final router = GoRouter(
   initialLocation: '/login',
+  redirect: (context, state) {
+    final auth = Provider.of<AuthStore>(context, listen: false);
+    final onLogin = state.matchedLocation == '/login';
+    if (!auth.isLoggedIn && !onLogin) return '/login';
+    if (auth.isLoggedIn && onLogin) return '/dashboard';
+    return null;
+  },
   routes: [
     GoRoute(
       path: '/login',
