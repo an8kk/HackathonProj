@@ -11,7 +11,8 @@ COPY backend/pyproject.toml backend/alembic.ini ./
 COPY backend/src ./src
 COPY backend/migrations ./migrations
 
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir setuptools wheel \
+ && pip install --no-cache-dir --no-build-isolation -e .
 
 EXPOSE 4000
 
