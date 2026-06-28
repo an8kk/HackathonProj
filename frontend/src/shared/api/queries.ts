@@ -26,6 +26,8 @@ import type {
   ProductDto,
   ReviewWriteOffBody,
   UpdateEmployeeBody,
+  UpdateOutletBody,
+  UpdateProductBody,
   WriteOffDto,
 } from './types';
 
@@ -182,6 +184,21 @@ export function useCreateProduct(): UseMutationResult<ProductDto, Error, CreateP
   });
 }
 
+export function useUpdateProduct(): UseMutationResult<
+  ProductDto,
+  Error,
+  { id: string; body: UpdateProductBody }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: UpdateProductBody }) =>
+      apiClient.updateProduct(id, body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.products });
+    },
+  });
+}
+
 export function useCreateNorm(): UseMutationResult<NormDto, Error, CreateNormBody> {
   const qc = useQueryClient();
   return useMutation({
@@ -196,6 +213,21 @@ export function useCreateOutlet(): UseMutationResult<OutletDto, Error, CreateOut
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: CreateOutletBody) => apiClient.createOutlet(body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.outlets });
+    },
+  });
+}
+
+export function useUpdateOutlet(): UseMutationResult<
+  OutletDto,
+  Error,
+  { id: string; body: UpdateOutletBody }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: UpdateOutletBody }) =>
+      apiClient.updateOutlet(id, body),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.outlets });
     },

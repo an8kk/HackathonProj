@@ -60,6 +60,13 @@ class CreateProductRequest(BaseModel):
     iiko_product_id: str | None = None
 
 
+class UpdateProductRequest(BaseModel):
+    name: str | None = None
+    unit: str | None = None
+    cost_per_unit: float | None = Field(default=None, ge=0)
+    iiko_product_id: str | None = None
+
+
 class CreateNormRequest(BaseModel):
     product_id: str
     outlet_id: str | None = None
@@ -70,6 +77,12 @@ class CreateNormRequest(BaseModel):
 class CreateOutletRequest(BaseModel):
     name: str
     address: str = ''
+    iiko_store_id: str | None = None
+
+
+class UpdateOutletRequest(BaseModel):
+    name: str | None = None
+    address: str | None = None
     iiko_store_id: str | None = None
 
 

@@ -25,6 +25,8 @@ import type {
   ReconciliationRowDto,
   ReviewWriteOffBody,
   UpdateEmployeeBody,
+  UpdateOutletBody,
+  UpdateProductBody,
   WriteOffDto,
 } from './types';
 
@@ -238,6 +240,13 @@ export const apiClient = {
     });
   },
 
+  updateProduct(id: string, body: UpdateProductBody): Promise<ProductDto> {
+    return request<ProductDto>(`/admin/products/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+  },
+
   createNorm(body: CreateNormBody): Promise<NormDto> {
     return request<NormDto>('/admin/norms', {
       method: 'POST',
@@ -248,6 +257,13 @@ export const apiClient = {
   createOutlet(body: CreateOutletBody): Promise<OutletDto> {
     return request<OutletDto>('/admin/outlets', {
       method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+
+  updateOutlet(id: string, body: UpdateOutletBody): Promise<OutletDto> {
+    return request<OutletDto>(`/admin/outlets/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
       body: JSON.stringify(body),
     });
   },

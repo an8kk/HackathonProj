@@ -12,6 +12,8 @@ from ..schemas import (
     CreateOutletRequest,
     CreateProductRequest,
     UpdateEmployeeRequest,
+    UpdateOutletRequest,
+    UpdateProductRequest,
 )
 from ..security import hash_pin
 from .errors import NotFoundError
@@ -52,6 +54,22 @@ async def create_outlet(session: AsyncSession, data: CreateOutletRequest) -> mod
         created_at=datetime.now(UTC),
     )
     session.add(outlet)
+    await session.flush()
+    return outlet
+
+
+async def update_outlet(
+    session: AsyncSession, outlet_id: str, data: UpdateOutletRequest
+) -> models.Outlet:
+    outlet = await session.get(models.Outlet, outlet_id)
+    if outlet is None:
+        raise NotFoundError('outlet_not_found')
+    if data.name is not None:
+        outlet.name = data.name
+    if data.address is not None:
+        outlet.address = data.address
+    if data.iiko_store_id is not None:
+        outlet.iiko_store_id = data.iiko_store_id
     await session.flush()
     return outlet
 
@@ -111,6 +129,24 @@ async def create_product(session: AsyncSession, data: CreateProductRequest) -> m
                 effective_from=datetime.now(UTC),
             )
         )
+    await session.flush()
+    return product
+
+
+async def update_product(
+    session: AsyncSession, product_id: str, data: UpdateProductRequest
+) -> models.Product:
+    product = await session.get(models.Product, product_id)
+    if product is None:
+        raise NotFoundError('product_not_found')
+    if data.name is not None:
+        product.name = data.name
+    if data.unit is not None:
+        product.unit = data.unit
+    if data.cost_per_unit is not None:
+        product.cost_per_unit = data.cost_per_unit
+    if data.iiko_product_id is not None:
+        product.iiko_product_id = data.iiko_product_id
     await session.flush()
     return product
 

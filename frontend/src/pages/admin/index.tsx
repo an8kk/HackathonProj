@@ -30,8 +30,11 @@ export default function AdminPanel() {
       <div className="bg-ink text-white">
         <div className="max-w-5xl mx-auto px-6 py-4">
           <div className="flex items-center gap-4 mb-4">
-            <button onClick={() => navigate('/')} className="flex items-center gap-1.5 text-white/50 hover:text-white transition-colors text-sm">
+            <button onClick={() => navigate('/dashboard')} className="flex items-center gap-1.5 text-white/50 hover:text-white transition-colors text-sm">
               <ArrowLeft className="w-4 h-4" />
+              На дашборд
+            </button>
+            <button onClick={() => navigate('/')} className="flex items-center gap-1.5 text-white/50 hover:text-white transition-colors text-sm">
               На главную
             </button>
             <div className="flex items-center gap-2">

@@ -10,8 +10,17 @@ import {
   useOutlets,
   useProducts,
   useUpdateEmployee,
+  useUpdateOutlet,
+  useUpdateProduct,
 } from 'shared/api/queries';
-import type { EmployeeDto, UpdateEmployeeBody } from 'shared/api/types';
+import type {
+  EmployeeDto,
+  OutletDto,
+  ProductDto,
+  UpdateEmployeeBody,
+  UpdateOutletBody,
+  UpdateProductBody,
+} from 'shared/api/types';
 
 const UNIT_OPTIONS = ['штуки', 'граммы', 'кг'] as const;
 const ROLE_OPTIONS = ['sender', 'reviewer', 'owner'] as const;
@@ -52,6 +61,81 @@ function SectionShell({
       </div>
       <div className="card p-4 self-start">{form}</div>
     </div>
+  );
+}
+
+function ProductRow({ product }: { product: ProductDto }) {
+  const updateProduct = useUpdateProduct();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(product.name);
+  const [unit, setUnit] = useState<string>(product.unit);
+  const [cost, setCost] = useState(String(product.cost_per_unit));
+  const [iikoId, setIikoId] = useState(product.iiko_product_id ?? '');
+
+  function resetForm() {
+    setName(product.name);
+    setUnit(product.unit);
+    setCost(String(product.cost_per_unit));
+    setIikoId(product.iiko_product_id ?? '');
+  }
+
+  function handleSave() {
+    const body: UpdateProductBody = {};
+    if (name !== product.name) body.name = name;
+    if (unit !== product.unit) body.unit = unit;
+    const nextCost = parseFloat(cost);
+    if (!Number.isNaN(nextCost) && nextCost !== product.cost_per_unit) body.cost_per_unit = nextCost;
+    const nextIiko = iikoId.trim() ? iikoId.trim() : null;
+    if (nextIiko !== product.iiko_product_id) body.iiko_product_id = nextIiko;
+    if (Object.keys(body).length === 0) {
+      setEditing(false);
+      return;
+    }
+    updateProduct.mutate(
+      { id: product.id, body },
+      { onSuccess: () => setEditing(false) },
+    );
+  }
+
+  if (editing) {
+    return (
+      <li className="py-3 flex flex-col gap-2 text-sm">
+        <input className="text-input" placeholder="Название" value={name} onChange={e => setName(e.target.value)} />
+        <select className="select-input" value={unit} onChange={e => setUnit(e.target.value)}>
+          {UNIT_OPTIONS.map(u => <option key={u} value={u}>{u}</option>)}
+        </select>
+        <input className="text-input" type="number" min="0" step="0.01" placeholder="Себестоимость" value={cost} onChange={e => setCost(e.target.value)} />
+        <input className="text-input" placeholder="iiko product id" value={iikoId} onChange={e => setIikoId(e.target.value)} />
+        <div className="flex items-center gap-3">
+          <button type="button" className="btn-primary" onClick={handleSave} disabled={updateProduct.isPending}>
+            {updateProduct.isPending ? 'Сохранение…' : 'Сохранить'}
+          </button>
+          <button
+            type="button"
+            className="text-sm font-semibold text-text-muted hover:text-text-primary"
+            onClick={() => {
+              resetForm();
+              setEditing(false);
+            }}
+          >
+            Отмена
+          </button>
+        </div>
+        <FormError error={updateProduct.error} />
+      </li>
+    );
+  }
+
+  return (
+    <li className="py-2 flex items-center justify-between gap-3 text-sm">
+      <span className="font-medium text-text-primary min-w-0 truncate">{product.name}</span>
+      <div className="flex items-center gap-3 flex-shrink-0">
+        <span className="text-text-muted">{product.cost_per_unit} ₸ · {product.unit}</span>
+        <button type="button" className="text-sm font-semibold text-amber-dark hover:underline" onClick={() => setEditing(true)}>
+          Изменить
+        </button>
+      </div>
+    </li>
   );
 }
 
@@ -111,10 +195,7 @@ export function ProductsTab() {
       ) : (
         <ul className="divide-y divide-stone-100">
           {products.map(p => (
-            <li key={p.id} className="py-2 flex items-center justify-between text-sm">
-              <span className="font-medium text-text-primary">{p.name}</span>
-              <span className="text-text-muted">{p.cost_per_unit} ₸ · {p.unit}</span>
-            </li>
+            <ProductRow key={p.id} product={p} />
           ))}
         </ul>
       )}
@@ -189,6 +270,74 @@ export function NormsTab() {
   );
 }
 
+function OutletRow({ outlet }: { outlet: OutletDto }) {
+  const updateOutlet = useUpdateOutlet();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(outlet.name);
+  const [address, setAddress] = useState(outlet.address ?? '');
+  const [iikoStoreId, setIikoStoreId] = useState(outlet.iiko_store_id ?? '');
+
+  function resetForm() {
+    setName(outlet.name);
+    setAddress(outlet.address ?? '');
+    setIikoStoreId(outlet.iiko_store_id ?? '');
+  }
+
+  function handleSave() {
+    const body: UpdateOutletBody = {};
+    if (name !== outlet.name) body.name = name;
+    if (address !== (outlet.address ?? '')) body.address = address;
+    const nextStore = iikoStoreId.trim() ? iikoStoreId.trim() : null;
+    if (nextStore !== outlet.iiko_store_id) body.iiko_store_id = nextStore;
+    if (Object.keys(body).length === 0) {
+      setEditing(false);
+      return;
+    }
+    updateOutlet.mutate(
+      { id: outlet.id, body },
+      { onSuccess: () => setEditing(false) },
+    );
+  }
+
+  if (editing) {
+    return (
+      <li className="py-3 flex flex-col gap-2 text-sm">
+        <input className="text-input" placeholder="Название" value={name} onChange={e => setName(e.target.value)} />
+        <input className="text-input" placeholder="Адрес" value={address} onChange={e => setAddress(e.target.value)} />
+        <input className="text-input" placeholder="iiko store id" value={iikoStoreId} onChange={e => setIikoStoreId(e.target.value)} />
+        <div className="flex items-center gap-3">
+          <button type="button" className="btn-primary" onClick={handleSave} disabled={updateOutlet.isPending}>
+            {updateOutlet.isPending ? 'Сохранение…' : 'Сохранить'}
+          </button>
+          <button
+            type="button"
+            className="text-sm font-semibold text-text-muted hover:text-text-primary"
+            onClick={() => {
+              resetForm();
+              setEditing(false);
+            }}
+          >
+            Отмена
+          </button>
+        </div>
+        <FormError error={updateOutlet.error} />
+      </li>
+    );
+  }
+
+  return (
+    <li className="py-2 flex items-center justify-between gap-3 text-sm">
+      <span className="font-medium text-text-primary min-w-0 truncate">{outlet.name}</span>
+      <div className="flex items-center gap-3 flex-shrink-0">
+        <span className="text-text-muted">{outlet.address || '—'}</span>
+        <button type="button" className="text-sm font-semibold text-amber-dark hover:underline" onClick={() => setEditing(true)}>
+          Изменить
+        </button>
+      </div>
+    </li>
+  );
+}
+
 export function OutletsTab() {
   const outletsQuery = useOutlets();
   const createOutlet = useCreateOutlet();
@@ -236,10 +385,7 @@ export function OutletsTab() {
       ) : (
         <ul className="divide-y divide-stone-100">
           {outlets.map(o => (
-            <li key={o.id} className="py-2 flex items-center justify-between text-sm">
-              <span className="font-medium text-text-primary">{o.name}</span>
-              <span className="text-text-muted">{o.address || '—'}</span>
-            </li>
+            <OutletRow key={o.id} outlet={o} />
           ))}
         </ul>
       )}

@@ -200,6 +200,19 @@ export interface UpdateEmployeeBody {
   active?: boolean;
 }
 
+export interface UpdateProductBody {
+  name?: string;
+  unit?: string;
+  cost_per_unit?: number;
+  iiko_product_id?: string | null;
+}
+
+export interface UpdateOutletBody {
+  name?: string;
+  address?: string;
+  iiko_store_id?: string | null;
+}
+
 /* ─────────────────────────── Analytics rollups ─────────────────────────── */
 
 export type OutletZone = 'green' | 'amber' | 'red';

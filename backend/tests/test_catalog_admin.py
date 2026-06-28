@@ -72,3 +72,31 @@ def test_admin_can_update_and_deactivate_employee(client: TestClient) -> None:
 
 def test_update_missing_employee_is_404(client: TestClient) -> None:
     assert client.patch('/admin/employees/nope', json={'name': 'X'}).status_code == 404
+
+
+def test_admin_can_update_product(client: TestClient) -> None:
+    created = client.post(
+        '/admin/products',
+        json={'name': 'Тестовый продукт', 'unit': 'штуки', 'cost_per_unit': 10},
+    ).json()['data']
+
+    updated = client.patch(
+        f'/admin/products/{created["id"]}',
+        json={'name': 'Тестовый продукт 2', 'cost_per_unit': 25},
+    )
+    assert updated.status_code == 200
+    assert updated.json()['data']['name'] == 'Тестовый продукт 2'
+    assert updated.json()['data']['cost_per_unit'] == 25
+
+
+def test_admin_can_update_outlet(client: TestClient) -> None:
+    updated = client.patch(
+        '/admin/outlets/outlet-mega',
+        json={'address': 'Новый адрес 123'},
+    )
+    assert updated.status_code == 200
+    assert updated.json()['data']['address'] == 'Новый адрес 123'
+
+
+def test_update_missing_product_is_404(client: TestClient) -> None:
+    assert client.patch('/admin/products/nope', json={'name': 'X'}).status_code == 404

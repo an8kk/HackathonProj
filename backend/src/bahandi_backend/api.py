@@ -27,6 +27,8 @@ from .schemas import (
     ReviewWriteOffRequest,
     SupplyRequest,
     UpdateEmployeeRequest,
+    UpdateOutletRequest,
+    UpdateProductRequest,
 )
 from .serializers import (
     employee_dict,
@@ -104,6 +106,13 @@ async def create_outlet(data: CreateOutletRequest, db_session: AsyncSession) -> 
     return ok(outlet_dict(await catalog_service.create_outlet(db_session, data)))
 
 
+@patch('/admin/outlets/{outlet_id:str}', guards=[require_roles('owner')])
+async def update_outlet(
+    outlet_id: str, data: UpdateOutletRequest, db_session: AsyncSession
+) -> dict[str, Any]:
+    return ok(outlet_dict(await catalog_service.update_outlet(db_session, outlet_id, data)))
+
+
 @post('/admin/employees', status_code=201, guards=[require_roles('owner')])
 async def create_employee(data: CreateEmployeeRequest, db_session: AsyncSession) -> dict[str, Any]:
     return ok(employee_dict(await catalog_service.create_employee(db_session, data)))
@@ -119,6 +128,13 @@ async def update_employee(
 @post('/admin/products', status_code=201, guards=[require_roles('owner')])
 async def create_product(data: CreateProductRequest, db_session: AsyncSession) -> dict[str, Any]:
     return ok(product_dict(await catalog_service.create_product(db_session, data)))
+
+
+@patch('/admin/products/{product_id:str}', guards=[require_roles('owner')])
+async def update_product(
+    product_id: str, data: UpdateProductRequest, db_session: AsyncSession
+) -> dict[str, Any]:
+    return ok(product_dict(await catalog_service.update_product(db_session, product_id, data)))
 
 
 @get('/norms')
@@ -331,9 +347,11 @@ PROTECTED_HANDLERS = [
     list_employees,
     list_products,
     create_outlet,
+    update_outlet,
     create_employee,
     update_employee,
     create_product,
+    update_product,
     list_norms,
     create_norm,
     upload_photo,
