@@ -11,6 +11,7 @@ from ..schemas import (
     CreateNormRequest,
     CreateOutletRequest,
     CreateProductRequest,
+    UpdateEmployeeRequest,
 )
 from ..security import hash_pin
 from .errors import NotFoundError
@@ -66,6 +67,25 @@ async def create_employee(session: AsyncSession, data: CreateEmployeeRequest) ->
         created_at=datetime.now(UTC),
     )
     session.add(employee)
+    await session.flush()
+    await session.refresh(employee)
+    return employee
+
+
+async def update_employee(
+    session: AsyncSession, employee_id: str, data: UpdateEmployeeRequest
+) -> models.Employee:
+    employee = await session.get(models.Employee, employee_id)
+    if employee is None:
+        raise NotFoundError('employee_not_found')
+    if data.name is not None:
+        employee.name = data.name
+    if data.role is not None:
+        employee.role = data.role
+    if data.pin is not None:
+        employee.pin_hash = hash_pin(data.pin)
+    if data.active is not None:
+        employee.active = data.active
     await session.flush()
     await session.refresh(employee)
     return employee

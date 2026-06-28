@@ -24,6 +24,7 @@ import type {
   PhotoDto,
   ProductDto,
   ReviewWriteOffBody,
+  UpdateEmployeeBody,
   WriteOffDto,
 } from './types';
 
@@ -177,6 +178,21 @@ export function useCreateEmployee(): UseMutationResult<EmployeeDto, Error, Creat
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: CreateEmployeeBody) => apiClient.createEmployee(body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['employees'] });
+    },
+  });
+}
+
+export function useUpdateEmployee(): UseMutationResult<
+  EmployeeDto,
+  Error,
+  { id: string; body: UpdateEmployeeBody }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: UpdateEmployeeBody }) =>
+      apiClient.updateEmployee(id, body),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['employees'] });
     },

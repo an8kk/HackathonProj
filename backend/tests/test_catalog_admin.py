@@ -45,3 +45,30 @@ def test_admin_can_create_outlet_and_employee(client: TestClient) -> None:
 
     login = client.post('/auth/login', json={'pin': '4444'})
     assert login.status_code == 200
+
+
+def test_admin_can_update_and_deactivate_employee(client: TestClient) -> None:
+    created = client.post(
+        '/admin/employees',
+        json={'outlet_id': 'outlet-mega', 'name': 'Темп Сотрудник', 'role': 'sender', 'pin': '4455'},
+    ).json()['data']
+    employee_id = created['id']
+
+    # update name + role
+    updated = client.patch(
+        f'/admin/employees/{employee_id}',
+        json={'name': 'Обновлён Сотрудник', 'role': 'reviewer'},
+    )
+    assert updated.status_code == 200
+    assert updated.json()['data']['name'] == 'Обновлён Сотрудник'
+    assert updated.json()['data']['role'] == 'reviewer'
+
+    # deactivate -> login with their PIN must fail
+    deactivated = client.patch(f'/admin/employees/{employee_id}', json={'active': False})
+    assert deactivated.status_code == 200
+    assert deactivated.json()['data']['active'] is False
+    assert client.post('/auth/login', json={'pin': '4455'}).status_code == 401
+
+
+def test_update_missing_employee_is_404(client: TestClient) -> None:
+    assert client.patch('/admin/employees/nope', json={'name': 'X'}).status_code == 404

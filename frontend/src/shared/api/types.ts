@@ -204,3 +204,10 @@ export interface CreateEmployeeBody {
   role: string;
   pin: string;
 }
+
+export interface UpdateEmployeeBody {
+  name?: string;
+  role?: string;
+  pin?: string;
+  active?: boolean;
+}

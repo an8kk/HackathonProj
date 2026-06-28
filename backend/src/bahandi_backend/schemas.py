@@ -80,6 +80,13 @@ class CreateEmployeeRequest(BaseModel):
     pin: str
 
 
+class UpdateEmployeeRequest(BaseModel):
+    name: str | None = None
+    role: str | None = None
+    pin: str | None = None
+    active: bool | None = None
+
+
 class SupplyRequest(BaseModel):
     outlet_id: str
     product_id: str

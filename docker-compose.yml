@@ -15,6 +15,39 @@ services:
       timeout: 5s
       retries: 10
 
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # One-shot: create the photo bucket and allow public read of objects.
+  createbuckets:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin}; do
+        echo 'waiting for minio...'; sleep 2;
+      done;
+      mc mb --ignore-existing local/${S3_BUCKET:-bahandi-photos};
+      mc anonymous set download local/${S3_BUCKET:-bahandi-photos};
+      echo 'bucket ready';
+      "
+
   backend:
     build:
       context: .
@@ -23,13 +56,11 @@ services:
       BACKEND_PORT: ${BACKEND_PORT:-4000}
       DATABASE_URL: ${DATABASE_URL:-postgres://hackathon:hackathon@postgres:5432/hackathon}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      STORAGE_DIR: /app/storage
-      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
-      S3_BUCKET: ${S3_BUCKET:-}
-      S3_REGION: ${S3_REGION:-}
-      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-}
-      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
-      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_BUCKET: ${S3_BUCKET:-bahandi-photos}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
+      S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       IIKO_SERVER_BASE_URL: ${IIKO_SERVER_BASE_URL:-}
       IIKO_SERVER_LOGIN: ${IIKO_SERVER_LOGIN:-}
       IIKO_SERVER_PASSWORD_SHA1: ${IIKO_SERVER_PASSWORD_SHA1:-}
@@ -38,8 +69,6 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev-insecure-secret-change-me}
     ports:
       - "4000:4000"
-    volumes:
-      - backend-storage:/app/storage
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:4000/health').status==200 else 1)\""]
       interval: 10s
@@ -49,6 +78,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      createbuckets:
+        condition: service_completed_successfully
 
   frontend:
     build:
@@ -62,6 +93,18 @@ services:
       backend:
         condition: service_healthy
 
+  mobile:
+    build:
+      context: ./mobile
+      dockerfile: Dockerfile
+      args:
+        API_BASE_URL: ${MOBILE_API_BASE_URL:-http://localhost:4000}
+    ports:
+      - "${MOBILE_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
 volumes:
   postgres-data:
-  backend-storage:
+  minio-data:

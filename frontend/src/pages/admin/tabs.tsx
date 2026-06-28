@@ -9,7 +9,9 @@ import {
   useNorms,
   useOutlets,
   useProducts,
+  useUpdateEmployee,
 } from 'shared/api/queries';
+import type { EmployeeDto, UpdateEmployeeBody } from 'shared/api/types';
 
 const UNIT_OPTIONS = ['штуки', 'граммы', 'кг'] as const;
 const ROLE_OPTIONS = ['sender', 'reviewer', 'owner'] as const;
@@ -245,6 +247,104 @@ export function OutletsTab() {
   );
 }
 
+function EmployeeRow({ employee }: { employee: EmployeeDto }) {
+  const updateEmployee = useUpdateEmployee();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(employee.name);
+  const [role, setRole] = useState<string>(employee.role);
+  const [pin, setPin] = useState('');
+
+  function resetForm() {
+    setName(employee.name);
+    setRole(employee.role);
+    setPin('');
+  }
+
+  function handleSave() {
+    const body: UpdateEmployeeBody = {};
+    if (name !== employee.name) body.name = name;
+    if (role !== employee.role) body.role = role;
+    if (pin) body.pin = pin;
+    if (Object.keys(body).length === 0) {
+      setEditing(false);
+      return;
+    }
+    updateEmployee.mutate(
+      { id: employee.id, body },
+      {
+        onSuccess: () => {
+          setPin('');
+          setEditing(false);
+        },
+      },
+    );
+  }
+
+  function toggleActive() {
+    updateEmployee.mutate({ id: employee.id, body: { active: !employee.active } });
+  }
+
+  if (editing) {
+    return (
+      <li className="py-3 flex flex-col gap-2 text-sm">
+        <input className="text-input" placeholder="Имя" value={name} onChange={e => setName(e.target.value)} />
+        <select className="select-input" value={role} onChange={e => setRole(e.target.value)}>
+          {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <input className="text-input" placeholder="Новый PIN (необязательно)" value={pin} onChange={e => setPin(e.target.value)} />
+        <div className="flex items-center gap-3">
+          <button type="button" className="btn-primary" onClick={handleSave} disabled={updateEmployee.isPending}>
+            {updateEmployee.isPending ? 'Сохранение…' : 'Сохранить'}
+          </button>
+          <button
+            type="button"
+            className="text-sm font-semibold text-text-muted hover:text-text-primary"
+            onClick={() => {
+              resetForm();
+              setEditing(false);
+            }}
+          >
+            Отмена
+          </button>
+        </div>
+        <FormError error={updateEmployee.error} />
+      </li>
+    );
+  }
+
+  return (
+    <li className="py-2 flex items-center justify-between gap-3 text-sm">
+      <div className="min-w-0">
+        <span className={`font-medium ${employee.active ? 'text-text-primary' : 'text-text-muted line-through'}`}>
+          {employee.name}
+        </span>
+        <span className="text-text-muted"> · {employee.role}</span>
+        {employee.outlet && <span className="text-text-muted"> · {employee.outlet.name}</span>}
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <span
+          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+            employee.active ? 'bg-success-light text-success' : 'bg-stone-100 text-text-muted'
+          }`}
+        >
+          {employee.active ? 'активен' : 'отключён'}
+        </span>
+        <button type="button" className="text-sm font-semibold text-amber-dark hover:underline" onClick={() => setEditing(true)}>
+          Изменить
+        </button>
+        <button
+          type="button"
+          className="text-sm font-semibold text-text-muted hover:text-theft"
+          onClick={toggleActive}
+          disabled={updateEmployee.isPending}
+        >
+          {employee.active ? 'Отключить' : 'Включить'}
+        </button>
+      </div>
+    </li>
+  );
+}
+
 export function EmployeesTab() {
   const employeesQuery = useEmployees();
   const outletsQuery = useOutlets();
@@ -301,10 +401,7 @@ export function EmployeesTab() {
       ) : (
         <ul className="divide-y divide-stone-100">
           {employees.map(emp => (
-            <li key={emp.id} className="py-2 flex items-center justify-between text-sm">
-              <span className="font-medium text-text-primary">{emp.name}</span>
-              <span className="text-text-muted">{emp.role}</span>
-            </li>
+            <EmployeeRow key={emp.id} employee={emp} />
           ))}
         </ul>
       )}

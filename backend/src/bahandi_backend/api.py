@@ -11,7 +11,7 @@ from .auth.guards import require_roles
 from .db import models
 from .integrations.iiko import service as iiko_service
 from .integrations.iiko.factory import build_write_off_sink
-from .photos.storage import LocalPhotoStorage, build_storage
+from .photos.storage import build_storage
 from .services.errors import NotFoundError
 from .schemas import (
     CreateEmployeeRequest,
@@ -26,6 +26,7 @@ from .schemas import (
     PhotoUploadRequest,
     ReviewWriteOffRequest,
     SupplyRequest,
+    UpdateEmployeeRequest,
 )
 from .serializers import (
     employee_dict,
@@ -106,6 +107,13 @@ async def create_outlet(data: CreateOutletRequest, db_session: AsyncSession) -> 
 @post('/admin/employees', status_code=201, guards=[require_roles('owner')])
 async def create_employee(data: CreateEmployeeRequest, db_session: AsyncSession) -> dict[str, Any]:
     return ok(employee_dict(await catalog_service.create_employee(db_session, data)))
+
+
+@patch('/admin/employees/{employee_id:str}', guards=[require_roles('owner')])
+async def update_employee(
+    employee_id: str, data: UpdateEmployeeRequest, db_session: AsyncSession
+) -> dict[str, Any]:
+    return ok(employee_dict(await catalog_service.update_employee(db_session, employee_id, data)))
 
 
 @post('/admin/products', status_code=201, guards=[require_roles('owner')])
@@ -293,17 +301,14 @@ _GUESSED_TYPES = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/pn
 
 @get('/media/{key:path}', media_type='application/octet-stream')
 async def serve_media(key: str, settings: Settings) -> Response[bytes]:
-    """Serve locally-stored photo bytes (S3 backend exposes object URLs directly)."""
+    """Stream photo bytes from object storage (S3/MinIO) through the backend."""
+    from pathlib import Path as _Path
     storage = build_storage(settings)
-    if not isinstance(storage, LocalPhotoStorage):
-        raise NotFoundError('media_not_available')
     storage_key = str(key).lstrip('/')
     try:
         data = await storage.read(storage_key)
-    except FileNotFoundError as error:
+    except Exception as error:  # noqa: BLE001 - missing key / storage error -> 404
         raise NotFoundError('media_not_found') from error
-    from pathlib import Path as _Path
-
     media_type = _GUESSED_TYPES.get(_Path(storage_key).suffix.lower(), 'application/octet-stream')
     return Response(content=data, media_type=media_type)
 
@@ -322,6 +327,7 @@ PROTECTED_HANDLERS = [
     list_products,
     create_outlet,
     create_employee,
+    update_employee,
     create_product,
     list_norms,
     create_norm,

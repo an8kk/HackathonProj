@@ -16,7 +16,8 @@ Errors are `{ "success": false, "error": "<code>" }` with an HTTP status (400/40
 - `GET /employees?outlet_id=` → `[{id,name,role,active,outlet,outlet_id}]`
 - `GET /products` → `[{id,name,unit,cost_per_unit,iiko_product_id}]` (unit ∈ `штуки|граммы|кг`)
 - `GET /norms?outlet_id=&product_id=` → `[{id,product_id,outlet_id,max_waste_pct,effective_from,effective_to}]`
-- Admin: `POST /admin/outlets`, `POST /admin/employees`, `POST /admin/products`, `POST /admin/norms` (201)
+- Admin: `POST /admin/outlets`, `POST /admin/employees`, `POST /admin/products`, `POST /admin/norms` (201, owner)
+- Employee management (owner): `PATCH /admin/employees/{id}` body `{ name?, role?, pin?, active? }` → updated employee. Set `active:false` to deactivate (their PIN can no longer log in). List via `GET /employees`.
 
 ## Photos
 - `POST /photos?outlet_id=` body `{ filename, content_base64, content_type, taken_at? (ISO) }` → 201

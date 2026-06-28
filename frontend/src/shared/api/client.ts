@@ -17,6 +17,7 @@ import type {
   PhotoDto,
   ProductDto,
   ReviewWriteOffBody,
+  UpdateEmployeeBody,
   WriteOffDto,
 } from './types';
 
@@ -216,6 +217,13 @@ export const apiClient = {
   createEmployee(body: CreateEmployeeBody): Promise<EmployeeDto> {
     return request<EmployeeDto>('/admin/employees', {
       method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+
+  updateEmployee(id: string, body: UpdateEmployeeBody): Promise<EmployeeDto> {
+    return request<EmployeeDto>(`/admin/employees/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
       body: JSON.stringify(body),
     });
   },

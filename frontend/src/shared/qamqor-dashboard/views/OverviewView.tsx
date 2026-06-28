@@ -1,10 +1,12 @@
 import {
-  TrendingDown, Activity, AlertTriangle, Clock, ChevronRight, ArrowRight, User,
+  Activity, Clock, ChevronRight, ArrowRight, User,
+  CheckCircle2, XCircle, Wallet,
 } from 'lucide-react';
 import { useDashboard, useAsyncData } from 'shared/qamqor-context/DashboardContext';
 import { fmtMoney } from 'shared/qamqor-data/format';
 import { C, varianceColor } from 'shared/qamqor-data/colors';
-import type { DashboardView } from 'shared/qamqor-data/types';
+import type { DashboardView, Metric } from 'shared/qamqor-data/types';
+import { useAnalyticsSummary } from 'shared/api/queries';
 import KpiCard from '../KpiCard';
 import ExecutiveSummary from '../ExecutiveSummary';
 
@@ -18,7 +20,9 @@ export default function OverviewView({
   onNavigate: (v: DashboardView) => void;
 }) {
   const { period, source } = useDashboard();
-  const kpis = useAsyncData(() => source.getNetworkKpis(period), [source, period]).data;
+  const summaryQuery = useAnalyticsSummary();
+  const summary = summaryQuery.data;
+  const toMetric = (value: number): Metric => ({ value, prev: value, spark: [] });
   const locations = useAsyncData(() => source.getLocations(period), [source, period]).data ?? [];
   const employees = useAsyncData(() => source.getEmployeeStats(period), [source, period]).data ?? [];
 
@@ -36,16 +40,19 @@ export default function OverviewView({
 
       {/* KPI strip — на тёмной плашке для контраста */}
       <div className="bg-ink rounded-2xl p-5">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {kpis ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {summary ? (
             <>
-              <KpiCard label="Необъяснённая недостача" metric={kpis.unexplainedDeficit} format={fmtMoney} color={C.red} icon={TrendingDown} invert subtitle="за период" />
-              <KpiCard label="Ср. AvT variance" metric={kpis.avgVariance} format={(n) => `${n}%`} color={C.amber} icon={Activity} invert subtitle="по сети" />
-              <KpiCard label="Точек в красной зоне" metric={kpis.redLocations} format={(n) => String(n)} color={C.red} icon={AlertTriangle} invert subtitle="из 7 точек" />
-              <KpiCard label="Заявок на проверке" metric={kpis.pendingReviews} format={(n) => String(n)} color={C.amber} icon={Clock} invert subtitle="ожидают менеджера" />
+              <KpiCard label="Всего заявок" metric={toMetric(summary.total_requests)} format={(n) => String(n)} color={C.amber} icon={Activity} invert subtitle="за всё время" />
+              <KpiCard label="На проверке" metric={toMetric(summary.pending)} format={(n) => String(n)} color={C.amber} icon={Clock} invert subtitle="ожидают решения" />
+              <KpiCard label="Одобрено" metric={toMetric(summary.approved)} format={(n) => String(n)} color={C.green} icon={CheckCircle2} subtitle="списания" />
+              <KpiCard label="Отклонено" metric={toMetric(summary.rejected)} format={(n) => String(n)} color={C.red} icon={XCircle} invert subtitle="списания" />
+              <KpiCard label="Стоимость одобренных" metric={toMetric(summary.approved_cost_value)} format={fmtMoney} color={C.red} icon={Wallet} invert subtitle="₸ за всё время" />
             </>
+          ) : summaryQuery.isLoading ? (
+            Array.from({ length: 5 }).map((_, i) => <div key={i} className="bg-white/10 rounded-2xl h-[104px] animate-pulse-subtle" />)
           ) : (
-            Array.from({ length: 4 }).map((_, i) => <div key={i} className="bg-white/10 rounded-2xl h-[104px] animate-pulse-subtle" />)
+            <p className="col-span-full text-sm text-white/60">Нет данных аналитики</p>
           )}
         </div>
       </div>

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from pydantic import field_validator
@@ -12,16 +11,13 @@ class Settings(BaseSettings):
 
     backend_port: int = 4000
     database_url: str = 'sqlite+aiosqlite:///./bahandi.db'
-    storage_dir: Path = Path('storage')
-
-    # Photo object storage: 'local' filesystem or 's3' (S3 / MinIO compatible)
-    storage_backend: str = 'local'
-    s3_bucket: str | None = None
-    s3_region: str | None = None
+    # Photo object storage: S3 / MinIO compatible (the only supported backend)
+    s3_bucket: str = 'bahandi-photos'
+    s3_region: str = 'us-east-1'
     s3_endpoint_url: str | None = None
     s3_access_key_id: str | None = None
     s3_secret_access_key: str | None = None
-    media_base_url: str = '/media'
+
     jwt_secret: str = 'dev-insecure-secret-change-me'
     jwt_ttl_seconds: int = 60 * 60 * 12
     qr_base_url: str = 'https://app.qamqor.kz/qr'
