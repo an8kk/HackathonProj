@@ -1,4 +1,4 @@
-import { useState, useId, useEffect, useRef, type ChangeEvent } from 'react';
+import { useState, useId, useMemo, useRef, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, ChevronLeft, ChevronRight, Camera, AlertTriangle,
@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import { useApp } from 'shared/qamqor-context/AppContext';
 import { useAuth } from 'shared/auth/session';
-import { apiClient, ApiError } from 'shared/api/client';
+import { ApiError } from 'shared/api/client';
+import { useCreateWriteOff, useProducts, useUploadPhoto } from 'shared/api/queries';
 import { WRITE_OFF_REASONS, STAGES } from 'shared/qamqor-data/seed';
 import type { Product, WriteOffRequest } from 'shared/qamqor-data/types';
 import type { ReasonCode } from 'shared/api/types';
@@ -89,29 +90,23 @@ export default function QamqorEmployee() {
   const [stageCode, setStageCode] = useState('');
   const [photoId, setPhotoId] = useState('');
   const [comment, setComment] = useState('');
-  const [products, setProducts] = useState<Product[]>([]);
+  const productsQuery = useProducts();
+  const products = useMemo<Product[]>(
+    () =>
+      (productsQuery.data ?? []).map(p => ({
+        id: p.id,
+        name: p.name,
+        type: p.unit === 'штуки' ? 'unit' : 'weight',
+        unit: p.unit,
+        costPerUnit: p.cost_per_unit,
+      })),
+    [productsQuery.data],
+  );
   const [photoFile, setPhotoFile] = useState<{ filename: string; contentType: string; base64: string } | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const uploadPhoto = useUploadPhoto();
+  const createWriteOff = useCreateWriteOff();
+  const submitting = uploadPhoto.isPending || createWriteOff.isPending;
   const fileInputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    let active = true;
-    apiClient
-      .listProducts()
-      .then(list => {
-        if (!active) return;
-        setProducts(
-          list.map(p => ({
-            id: p.id,
-            name: p.name,
-            type: p.unit === 'штуки' ? 'unit' : 'weight',
-            unit: p.unit,
-            costPerUnit: p.cost_per_unit,
-          })),
-        );
-      })
-      .catch(() => { /* leave products empty; submit surfaces backend errors */ });
-    return () => { active = false; };
-  }, []);
 
   const myRequests = requests.filter(r => r.locationId === DEMO_EMPLOYEE.locationId);
 
@@ -176,19 +171,21 @@ export default function QamqorEmployee() {
       showToast('Сессия не найдена — войдите заново');
       return;
     }
-    setSubmitting(true);
     let uploadedPhotoId: string | undefined;
     try {
       if (photoFile) {
-        const photo = await apiClient.uploadPhoto(outletId, {
-          filename: photoFile.filename,
-          content_base64: photoFile.base64,
-          content_type: photoFile.contentType,
-          taken_at: new Date().toISOString(),
+        const photo = await uploadPhoto.mutateAsync({
+          outletId,
+          body: {
+            filename: photoFile.filename,
+            content_base64: photoFile.base64,
+            content_type: photoFile.contentType,
+            taken_at: new Date().toISOString(),
+          },
         });
         uploadedPhotoId = photo.id;
       }
-      await apiClient.createWriteOff({
+      await createWriteOff.mutateAsync({
         outlet_id: outletId,
         employee_id: employeeId,
         product_id: product.id,
@@ -200,7 +197,6 @@ export default function QamqorEmployee() {
         comment,
       });
     } catch (err) {
-      setSubmitting(false);
       showToast(err instanceof ApiError ? `Ошибка: ${err.code}` : 'Ошибка сети');
       return;
     }
@@ -229,7 +225,6 @@ export default function QamqorEmployee() {
       flags: buildFlags(),
     };
     addRequest(req);
-    setSubmitting(false);
     resetForm();
     setTab('requests');
     showToast('Заявка отправлена на проверку');

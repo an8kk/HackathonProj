@@ -1,12 +1,13 @@
 from __future__ import annotations
-
+import asyncio
 from typing import Any
-
 from litestar import Litestar, Request, Response
 from litestar.config.cors import CORSConfig
+from litestar.router import Router
 
-from .api import DEPENDENCIES, ROUTE_HANDLERS
-from .db.base import Base
+from .api import DEPENDENCIES, PROTECTED_HANDLERS, PUBLIC_HANDLERS
+from .auth.guards import require_auth
+from .db.migrations import run_migrations
 from .db.seed import seed_demo_data
 from .db.session import create_engine
 from .services.errors import ServiceError
@@ -16,9 +17,9 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 
 async def _on_startup(app: Litestar) -> None:
-    engine = app.state.engine
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
+    settings = app.state.settings
+    # Schema is managed by Alembic migrations (single source of truth).
+    await asyncio.to_thread(run_migrations, settings.database_url)
     factory = app.state.session_factory
     async with factory() as session:
         await seed_demo_data(session)
@@ -42,8 +43,9 @@ def create_app(settings: Settings | None = None) -> Litestar:
 
     cors = CORSConfig(allow_origins=['*'], allow_methods=['*'], allow_headers=['*'])
 
+    protected = Router(path='/', route_handlers=PROTECTED_HANDLERS, guards=[require_auth])
     app = Litestar(
-        route_handlers=ROUTE_HANDLERS,
+        route_handlers=[*PUBLIC_HANDLERS, protected],
         dependencies=DEPENDENCIES,
         cors_config=cors,
         on_startup=[_on_startup],

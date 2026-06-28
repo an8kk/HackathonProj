@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Smartphone, ClipboardCheck, BarChart3, ChevronRight, TrendingDown } from 'lucide-react';
 import { useAuth } from 'shared/auth/session';
+import { useLogin } from 'shared/api/queries';
 import { ApiError } from 'shared/api/client';
 import type { Role } from 'shared/api/types';
 const ROLE_ROUTES: Record<Role, string> = {
@@ -42,23 +43,22 @@ const roles = [
 
 export default function QamqorLanding() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { applySession } = useAuth();
+  const loginMutation = useLogin();
   const pinRef = useRef<HTMLInputElement>(null);
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const submitting = loginMutation.isPending;
   async function handleLogin(e: FormEvent) {
     e.preventDefault();
     if (!pin || submitting) return;
-    setSubmitting(true);
     setError('');
     try {
-      const user = await login(pin);
+      const user = await loginMutation.mutateAsync(pin);
+      applySession(user);
       navigate(ROLE_ROUTES[user.role] ?? '/');
     } catch (err) {
       setError(err instanceof ApiError ? err.code : 'network_error');
-    } finally {
-      setSubmitting(false);
     }
   }
   return (

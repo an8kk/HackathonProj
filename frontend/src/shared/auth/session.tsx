@@ -6,6 +6,8 @@ interface AuthContextValue {
   user: UserDto | null;
   token: string | null;
   login: (pin: string) => Promise<LoginResponse>;
+  /** Apply a session obtained elsewhere (e.g. the `useLogin` mutation) without re-fetching. */
+  applySession: (result: LoginResponse) => void;
   logout: () => void;
 }
 
@@ -26,8 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setTokenState] = useState<string | null>(() => apiClient.getToken());
   const [user, setUser] = useState<UserDto | null>(loadStoredUser);
 
-  const login = useCallback(async (pin: string): Promise<LoginResponse> => {
-    const result = await apiClient.login(pin);
+  const applySession = useCallback((result: LoginResponse): void => {
     const { token: nextToken, ...nextUser } = result;
     apiClient.setToken(nextToken);
     setTokenState(nextToken);
@@ -37,8 +38,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // localStorage unavailable — keep the in-memory user.
     }
-    return result;
   }, []);
+
+  const login = useCallback(
+    async (pin: string): Promise<LoginResponse> => {
+      const result = await apiClient.login(pin);
+      applySession(result);
+      return result;
+    },
+    [applySession],
+  );
 
   const logout = useCallback(() => {
     apiClient.setToken(null);
@@ -52,8 +61,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, token, login, logout }),
-    [user, token, login, logout],
+    () => ({ user, token, login, applySession, logout }),
+    [user, token, login, applySession, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

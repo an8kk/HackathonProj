@@ -33,6 +33,28 @@ const pendingWriteOff = {
   iiko_sync: { status: 'pending', external_id: null, error: null },
 };
 
+const photo = {
+  id: 'ph1',
+  filename: 'tomato.jpg',
+  storage_key: 'photos/ph1.jpg',
+  content_type: 'image/jpeg',
+  sha256_hash: 'abc',
+  perceptual_hash: null,
+  taken_at: null,
+  uploaded_at: '2026-06-28T10:00:00Z',
+  metadata_status: 'valid',
+  validation_errors: [],
+  ai_analysis: {
+    is_food_waste: true,
+    detected_product: 'Помидоры черри',
+    confidence: 0.92,
+    condition: 'spoiled',
+    suggested_reason: 'EXPIRED',
+    fraud_warnings: ['reused_image'],
+    reviewer_note: 'Похоже на испорченный продукт',
+  },
+};
+
 const iikoStatus = {
   iiko_web: { provider: 'iikoWeb', configured: false, base_url: null, supported_endpoints: ['stores'], write_off_act_endpoint_available: false },
   iiko_server: { provider: 'iiko Server', configured: false, base_url: null, write_off_act_endpoint: '/resto/api/documents/import/writeoffDocument', write_off_act_endpoint_available: false },
@@ -44,15 +66,15 @@ const summary = { total_requests: 1, pending: 1, approved: 0, rejected: 0, appro
 function routedFetch(url: string): Response {
   if (url.includes('/integrations/iiko/status')) return jsonResponse({ success: true, data: iikoStatus });
   if (url.includes('/analytics/summary')) return jsonResponse({ success: true, data: summary });
+  if (url.includes('/photos/ph1')) return jsonResponse({ success: true, data: photo });
   if (url.includes('/products')) return jsonResponse({ success: true, data: [product] });
   if (url.includes('/employees')) return jsonResponse({ success: true, data: [] });
   if (url.includes('/outlets')) return jsonResponse({ success: true, data: [] });
-  if (url.includes('/review')) return jsonResponse({ success: true, data: { ...pendingWriteOff, status: 'approved' } });
   if (url.includes('/write-offs')) return jsonResponse({ success: true, data: [pendingWriteOff] });
   return jsonResponse({ success: true, data: [] });
 }
 
-describe('QamqorManager review queue', () => {
+describe('Reviewer photo evidence', () => {
   beforeEach(() => {
     localStorage.clear();
     localStorage.setItem('qamqor_token', 'jwt-reviewer');
@@ -66,8 +88,8 @@ describe('QamqorManager review queue', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders a pending request and issues a PATCH on approve', async () => {
-    const fetchMock = vi.fn(async (url: unknown, _init?: unknown) => routedFetch(String(url)));
+  it('shows the AI verdict and metadata status for a pending request', async () => {
+    const fetchMock = vi.fn(async (url: unknown) => routedFetch(String(url)));
     vi.stubGlobal('fetch', fetchMock);
 
     renderWithProviders(<QamqorManager />);
@@ -76,15 +98,17 @@ describe('QamqorManager review queue', () => {
       expect(screen.getByText('Помидор')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Одобрить/i }));
+    // Evidence (incl. usePhoto) is only mounted once the card is expanded.
+    fireEvent.click(screen.getByRole('button', { name: /Подробнее/i }));
 
     await waitFor(() => {
-      const reviewCall = fetchMock.mock.calls.find(call => String(call[0]).includes('/write-offs/wo1/review'));
-      expect(reviewCall).toBeDefined();
-      const init = reviewCall?.[1] as RequestInit;
-      expect(init.method).toBe('PATCH');
-      const body = JSON.parse(init.body as string);
-      expect(body).toMatchObject({ reviewer_id: 'rev-9', decision: 'approved' });
+      expect(screen.getByText('Помидоры черри')).toBeInTheDocument();
+      expect(screen.getByText('метаданные в норме')).toBeInTheDocument();
     });
+
+    const photoCall = fetchMock.mock.calls.find(call => String(call[0]).includes('/photos/ph1'));
+    expect(photoCall).toBeDefined();
+    const img = screen.getByAltText('Фото списания') as HTMLImageElement;
+    expect(img.src).toContain('/media/photos/ph1.jpg');
   });
 });

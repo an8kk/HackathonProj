@@ -43,6 +43,18 @@ export interface ProductDto {
 
 export type PhotoMetadataStatus = 'valid' | 'warning' | 'invalid';
 
+/** AI verdict attached to a photo. All fields optional — the backend default is `{}`. */
+export interface PhotoAiAnalysis {
+  is_food_waste?: boolean | null;
+  detected_product?: string | null;
+  confidence?: number;
+  condition?: string | null;
+  suggested_reason?: ReasonCode | null;
+  fraud_warnings?: string[];
+  reviewer_note?: string | null;
+  status?: string;
+}
+
 export interface PhotoDto {
   id: string;
   filename: string;
@@ -54,7 +66,7 @@ export interface PhotoDto {
   uploaded_at: string;
   metadata_status: PhotoMetadataStatus;
   validation_errors: string[];
-  ai_analysis: unknown;
+  ai_analysis: PhotoAiAnalysis;
 }
 
 export type ReasonCode = 'DAMAGED' | 'EXPIRED' | 'OVERCOOKED' | 'RAW_WASTE' | 'DROPPED' | 'OTHER';
@@ -149,4 +161,46 @@ export interface IikoStatusDto {
   iiko_web: IikoWebStatusDto;
   iiko_server: IikoServerStatusDto;
   note: string;
+}
+
+export interface NormDto {
+  id: string;
+  product_id: string;
+  outlet_id: string | null;
+  max_waste_pct: number;
+  effective_from: string | null;
+  effective_to: string | null;
+}
+
+export interface ListNormsParams {
+  outlet_id?: string;
+  product_id?: string;
+}
+
+export interface CreateProductBody {
+  name: string;
+  unit: string;
+  cost_per_unit: number;
+  norm_waste_pct?: number;
+  iiko_product_id?: string | null;
+}
+
+export interface CreateNormBody {
+  product_id: string;
+  outlet_id?: string | null;
+  max_waste_pct: number;
+  effective_from?: string;
+}
+
+export interface CreateOutletBody {
+  name: string;
+  address?: string;
+  iiko_store_id?: string | null;
+}
+
+export interface CreateEmployeeBody {
+  outlet_id: string;
+  name: string;
+  role: string;
+  pin: string;
 }

@@ -8,6 +8,9 @@ coverage/
 __pycache__/
 .pytest_cache/
 backend/storage/
+backend/.pytest-tmp/
+backend/*.db
+backend/uv.lock
 .env
 .env.*
 !.env.example

@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
 import { Activity, CheckCircle2, XCircle, Plug } from 'lucide-react';
-import { apiClient, ApiError } from 'shared/api/client';
-import type { AnalyticsSummaryDto, IikoStatusDto } from 'shared/api/types';
+import { ApiError } from 'shared/api/client';
+import { useAnalyticsSummary, useIikoStatus } from 'shared/api/queries';
 
 function Flag({ ok, label }: { ok: boolean; label: string }) {
   return (
@@ -16,30 +15,19 @@ function Flag({ ok, label }: { ok: boolean; label: string }) {
 }
 
 export default function IntegrationStatus() {
-  const [iiko, setIiko] = useState<IikoStatusDto | null>(null);
-  const [summary, setSummary] = useState<AnalyticsSummaryDto | null>(null);
-  const [error, setError] = useState('');
+  const iikoQuery = useIikoStatus();
+  const summaryQuery = useAnalyticsSummary();
 
-  useEffect(() => {
-    let active = true;
-    Promise.all([apiClient.iikoStatus(), apiClient.analyticsSummary()])
-      .then(([status, sum]) => {
-        if (!active) return;
-        setIiko(status);
-        setSummary(sum);
-      })
-      .catch(err => {
-        if (active) setError(err instanceof ApiError ? err.code : 'network_error');
-      });
-    return () => { active = false; };
-  }, []);
-
+  const error = iikoQuery.error ?? summaryQuery.error;
   if (error) {
+    const code = error instanceof ApiError ? error.code : 'network_error';
     return (
-      <div className="card p-4 text-sm text-theft">Интеграции недоступны: {error}</div>
+      <div className="card p-4 text-sm text-theft">Интеграции недоступны: {code}</div>
     );
   }
 
+  const iiko = iikoQuery.data;
+  const summary = summaryQuery.data;
   if (!iiko || !summary) {
     return <div className="card p-4 text-sm text-text-muted">Загрузка интеграций…</div>;
   }

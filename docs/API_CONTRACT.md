@@ -5,10 +5,11 @@ Base URL: `VITE_API_BASE_URL` / mobile `API_BASE_URL` (default `http://localhost
 All successful responses are wrapped: `{ "success": true, "data": <payload> }`.
 Errors are `{ "success": false, "error": "<code>" }` with an HTTP status (400/401/404/409).
 
-## Auth
+## Auth & authorization
 - `POST /auth/login` body `{ "pin": "1111" }` → `data`: `{ id, name, role, active, outlet: {id,name,address,iiko_store_id}, outlet_id, token }`
   - Roles: `sender`, `reviewer`, `owner`. Seeded PINs: `1111` sender, `2222` reviewer, `9999` owner, `3333` sender (Dostyk).
-  - `token` is a JWT (HS256). Send as `Authorization: Bearer <token>` (currently not enforced server-side but clients should send it).
+  - `token` is a JWT (HS256). **All routes except `POST /auth/login`, `GET /health`, and `GET /media/...` require `Authorization: Bearer <token>`.** Missing/invalid → 401.
+  - Role enforcement: `/admin/*` and `POST /admin/qr-tokens` → `owner`; `PATCH /write-offs/{id}/review` → `reviewer|owner`; `POST /write-offs` and `POST /photos` → `sender|reviewer|owner`; all other reads → any authenticated user. Wrong role → 403.
 
 ## Reference data
 - `GET /outlets` → `[{id,name,address,iiko_store_id}]`
@@ -22,6 +23,8 @@ Errors are `{ "success": false, "error": "<code>" }` with an HTTP status (400/40
   - `data`: `{ id, filename, storage_key, content_type, sha256_hash, perceptual_hash, taken_at, uploaded_at, metadata_status, validation_errors[], ai_analysis }`
   - `metadata_status` ∈ `valid|warning|invalid`. Errors include `taken_at_is_in_future`, `missing_taken_at`, `duplicate_photo_hash`, `unsupported_content_type`.
 - `POST /photo-analysis/analyze` body `{ image_base64, media_type }` → `data` AI analysis.
+- `GET /photos/{id}` → full photo `data` (incl. `ai_analysis`, `metadata_status`, `validation_errors`) for reviewer evidence.
+- `GET /media/{storage_key}` → raw image bytes (public; local backend only — S3 backend exposes object URLs). Use for `<img>` previews.
 
 ## Write-offs
 - `POST /write-offs` (201) body:
@@ -55,8 +58,8 @@ Errors are `{ "success": false, "error": "<code>" }` with an HTTP status (400/40
 - `GET /qr/{token}` → `{entity_type, entity_id}`
 
 ## Integrations (iiko)
-- `GET /integrations/iiko/status` → `{ iiko_web:{...,supported_endpoints[],write_off_act_endpoint_available:false}, iiko_server:{write_off_act_endpoint:"/resto/api/documents/import/writeoffDocument", configured, write_off_act_endpoint_available}, note }`
-- `POST /integrations/iiko/sync-reference-data` → `{status, stores_imported, menus_imported}`
+- `GET /integrations/iiko/status` → `{ provider:"iiko Server API", purpose, configured, base_url, write_off_act_endpoint:"/resto/api/documents/import/writeoffDocument", write_off_act_endpoint_available, note }`
+- iiko's only role is write-off acts: on approval the backend creates the act via the iiko Server `writeoffDocument` import, which transfers the data to iiko and deducts iiko inventory. A local `WRITE_OFF` inventory movement is recorded in parallel.
 
 ## Audit
 - `GET /audit/events` → recent audit events.

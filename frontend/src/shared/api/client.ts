@@ -1,12 +1,18 @@
 import { buildApiUrl } from './http-client';
 import type {
   AnalyticsSummaryDto,
+  CreateEmployeeBody,
+  CreateNormBody,
+  CreateOutletBody,
   CreatePhotoBody,
+  CreateProductBody,
   CreateWriteOffBody,
   EmployeeDto,
   IikoStatusDto,
+  ListNormsParams,
   ListWriteOffsParams,
   LoginResponse,
+  NormDto,
   OutletDto,
   PhotoDto,
   ProductDto,
@@ -137,6 +143,16 @@ export const apiClient = {
     return request<EmployeeDto[]>(`/employees${buildQuery({ outlet_id: outletId })}`);
   },
 
+  listNorms(params: ListNormsParams = {}): Promise<NormDto[]> {
+    return request<NormDto[]>(
+      `/norms${buildQuery({ outlet_id: params.outlet_id, product_id: params.product_id })}`,
+    );
+  },
+
+  getPhoto(id: string): Promise<PhotoDto> {
+    return request<PhotoDto>(`/photos/${encodeURIComponent(id)}`);
+  },
+
   uploadPhoto(outletId: string, body: CreatePhotoBody): Promise<PhotoDto> {
     return request<PhotoDto>(`/photos${buildQuery({ outlet_id: outletId })}`, {
       method: 'POST',
@@ -157,6 +173,10 @@ export const apiClient = {
     );
   },
 
+  getWriteOff(id: string): Promise<WriteOffDto> {
+    return request<WriteOffDto>(`/write-offs/${encodeURIComponent(id)}`);
+  },
+
   reviewWriteOff(id: string, body: ReviewWriteOffBody): Promise<WriteOffDto> {
     return request<WriteOffDto>(`/write-offs/${encodeURIComponent(id)}/review`, {
       method: 'PATCH',
@@ -170,5 +190,33 @@ export const apiClient = {
 
   iikoStatus(): Promise<IikoStatusDto> {
     return request<IikoStatusDto>('/integrations/iiko/status');
+  },
+
+  createProduct(body: CreateProductBody): Promise<ProductDto> {
+    return request<ProductDto>('/admin/products', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+
+  createNorm(body: CreateNormBody): Promise<NormDto> {
+    return request<NormDto>('/admin/norms', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+
+  createOutlet(body: CreateOutletBody): Promise<OutletDto> {
+    return request<OutletDto>('/admin/outlets', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+
+  createEmployee(body: CreateEmployeeBody): Promise<EmployeeDto> {
+    return request<EmployeeDto>('/admin/employees', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
   },
 };
