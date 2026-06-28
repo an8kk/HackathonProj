@@ -13,6 +13,7 @@ import { WRITE_OFF_REASONS, STAGES } from 'shared/qamqor-data/seed';
 import type { Product, WriteOffRequest } from 'shared/qamqor-data/types';
 import { buildRefMaps, toWriteOffRequest } from 'shared/qamqor-data/backendMap';
 import type { ReasonCode } from 'shared/api/types';
+import { CameraCapture, type CapturedPhoto } from 'widgets/camera-capture';
 // UI reason codes (seed) → backend ReasonCode enum.
 const REASON_CODE_MAP: Record<string, ReasonCode> = {
   expired: 'EXPIRED',
@@ -104,6 +105,7 @@ export default function QamqorEmployee() {
     [productsQuery.data],
   );
   const [photoFile, setPhotoFile] = useState<{ filename: string; contentType: string; base64: string } | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string>('');
   const uploadPhoto = useUploadPhoto();
   const createWriteOff = useCreateWriteOff();
   const submitting = uploadPhoto.isPending || createWriteOff.isPending;
@@ -154,9 +156,15 @@ export default function QamqorEmployee() {
     setStageCode('');
     setPhotoId('');
     setPhotoFile(null);
+    setPhotoPreview('');
     setComment('');
     setStep('product');
     setShowForm(false);
+  }
+  function handleCaptured(photo: CapturedPhoto) {
+    setPhotoFile({ filename: photo.filename, contentType: photo.contentType, base64: photo.base64 });
+    setPhotoPreview(photo.dataUrl);
+    setPhotoId(photo.filename);
   }
   function handlePhotoSelected(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -166,6 +174,7 @@ export default function QamqorEmployee() {
       const result = typeof reader.result === 'string' ? reader.result : '';
       const base64 = result.includes(',') ? result.slice(result.indexOf(',') + 1) : result;
       setPhotoFile({ filename: file.name, contentType: file.type || 'image/jpeg', base64 });
+      setPhotoPreview(result);
       setPhotoId(file.name);
     };
     reader.readAsDataURL(file);
@@ -557,25 +566,26 @@ export default function QamqorEmployee() {
                       />
 
                       {!photoId ? (
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="w-full h-48 rounded-2xl border-2 border-dashed border-amber-DEFAULT bg-amber-light flex flex-col items-center justify-center gap-3 transition-all hover:bg-amber-light/80"
-                        >
-                          <Camera className="w-10 h-10 text-amber-dark" />
-                          <span className="text-sm font-semibold text-amber-dark">Сделать фото</span>
-                        </button>
+                        <CameraCapture
+                          onCapture={handleCaptured}
+                          onPickFile={() => fileInputRef.current?.click()}
+                        />
                       ) : (
                         <div>
-                          <PhotoPlaceholder id="A" color="#E8F5E9" />
+                          <img
+                            src={photoPreview}
+                            alt="Снимок продукта"
+                            className="w-full rounded-2xl object-cover"
+                            style={{ aspectRatio: '4 / 3' }}
+                          />
                           <div
                             className="mt-3 flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium"
                             style={{ background: '#E8F5E9', color: '#2E7D32' }}
                           >
                             <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span>фото сделано в приложении · {new Date().toLocaleDateString('ru-RU', {day:'2-digit',month:'2-digit'})} · {DEMO_EMPLOYEE.location.replace('Bahandi ','')}</span>
+                            <span>фото сделано в приложении · {new Date().toLocaleDateString('ru-RU', {day:'2-digit',month:'2-digit'})}</span>
                           </div>
-                          <button onClick={() => { setPhotoId(''); setPhotoFile(null); }} className="mt-2 text-xs text-text-muted underline">
+                          <button onClick={() => { setPhotoId(''); setPhotoFile(null); setPhotoPreview(''); }} className="mt-2 text-xs text-text-muted underline">
                             Переснять
                           </button>
                         </div>
