@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Loader2, ChevronDown, ChevronUp, AlertTriangle, Info, Scale, Package } from 'lucide-react';
 
 import { useDashboard, useAsyncData } from 'shared/qamqor-context/DashboardContext';
@@ -42,7 +42,7 @@ function LocationRow({ loc, norm, isUnit }: LocationRowProps) {
         </div>
       </div>
       {!isUnit && (
-        <div className="relative h-2 bg-stone-100 rounded-full overflow-hidden">
+        <div className="relative h-2 bg-surface rounded-full overflow-hidden">
           <div
             className="absolute left-0 top-0 h-full rounded-full opacity-30"
             style={{ width: `${normWidth}%`, background: C.muted }}
@@ -81,8 +81,8 @@ function WeightCard({ detail }: WeightCardProps) {
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-bold text-text-primary">{detail.product}</span>
-          <span className="badge badge-ink text-[10px]">
+          <span className="text-sm font-bold text-charcoal">{detail.product}</span>
+          <span className="badge badge-muted text-[10px]">
             <Scale className="w-2.5 h-2.5" />
             весовой
           </span>
@@ -93,24 +93,24 @@ function WeightCard({ detail }: WeightCardProps) {
           )}
         </div>
         <div className="text-right flex-shrink-0">
-          <div className="text-xs text-text-muted">списано</div>
-          <div className="text-sm font-bold text-text-primary">{fmtMoney(detail.totalCost)}</div>
+          <div className="text-xs text-muted">списано</div>
+          <div className="text-sm font-bold text-charcoal">{fmtMoney(detail.totalCost)}</div>
         </div>
       </div>
 
       {/* Norms row */}
-      <div className="flex items-center gap-4 text-xs text-text-muted mb-2 flex-wrap">
-        <span>Норма отхода: <strong className="text-text-primary">{detail.norm}%</strong></span>
+      <div className="flex items-center gap-4 text-xs text-muted mb-2 flex-wrap">
+        <span>Норма отхода: <strong className="text-charcoal">{detail.norm}%</strong></span>
         <span>Ср. по сети: <strong style={{ color: networkOverNorm ? C.red : C.green }}>{detail.networkDeclared}%</strong></span>
       </div>
 
       {/* Bar: network vs norm */}
       <div className="mb-3">
-        <div className="flex justify-between text-[10px] text-text-muted mb-1">
+        <div className="flex justify-between text-[10px] text-muted mb-1">
           <span>Сеть vs норма</span>
           <span>{detail.networkDeclared}% / {detail.norm}%</span>
         </div>
-        <div className="relative h-2 bg-stone-100 rounded-full overflow-hidden">
+        <div className="relative h-2 bg-surface rounded-full overflow-hidden">
           <div
             className="absolute left-0 top-0 h-full rounded-full opacity-30"
             style={{ width: `${normWidth}%`, background: C.muted }}
@@ -140,8 +140,8 @@ function WeightCard({ detail }: WeightCardProps) {
       {/* Cost summary */}
       <div className="flex items-center gap-4 flex-wrap mb-3">
         <div>
-          <div className="text-[10px] text-text-muted uppercase tracking-wide">Списано</div>
-          <div className="text-sm font-bold text-text-primary">{fmtMoneyFull(detail.totalCost)}</div>
+          <div className="text-[10px] text-muted uppercase tracking-wide">Списано</div>
+          <div className="text-sm font-bold text-charcoal">{fmtMoneyFull(detail.totalCost)}</div>
         </div>
         {detail.overNormCost > 0 && (
           <div>
@@ -154,7 +154,7 @@ function WeightCard({ detail }: WeightCardProps) {
       {/* Expand toggle */}
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="flex items-center gap-1 text-xs font-medium w-full justify-center py-1.5 rounded-lg hover:bg-stone-50 transition-colors"
+        className="flex items-center gap-1 text-xs font-medium w-full justify-center py-1.5 rounded-lg hover:bg-surface transition-colors"
         style={{ color: C.muted }}
       >
         {expanded ? (
@@ -171,7 +171,7 @@ function WeightCard({ detail }: WeightCardProps) {
       </button>
 
       {expanded && (
-        <div className="mt-2 pt-2 border-t border-stone-100">
+        <div className="mt-2 pt-2 border-t border-card-border">
           {detail.locations.map((loc) => (
             <LocationRow key={loc.locationName} loc={loc} norm={detail.norm} isUnit={false} />
           ))}
@@ -198,8 +198,8 @@ function UnitCard({ detail }: UnitCardProps) {
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-bold text-text-primary">{detail.product}</span>
-          <span className="badge badge-amber text-[10px]">
+          <span className="text-sm font-bold text-charcoal">{detail.product}</span>
+          <span className="badge badge-orange text-[10px]">
             <Package className="w-2.5 h-2.5" />
             штучный
           </span>
@@ -210,8 +210,8 @@ function UnitCard({ detail }: UnitCardProps) {
           )}
         </div>
         <div className="text-right flex-shrink-0">
-          <div className="text-xs text-text-muted">списано</div>
-          <div className="text-sm font-bold text-text-primary">{fmtMoney(detail.totalCost)}</div>
+          <div className="text-xs text-muted">списано</div>
+          <div className="text-sm font-bold text-charcoal">{fmtMoney(detail.totalCost)}</div>
         </div>
       </div>
 
@@ -227,7 +227,7 @@ function UnitCard({ detail }: UnitCardProps) {
       </div>
 
       {/* Worst location */}
-      <div className="flex items-center gap-2 text-xs text-text-muted mb-1 flex-wrap">
+      <div className="flex items-center gap-2 text-xs text-muted mb-1 flex-wrap">
         <span>Худшая точка:</span>
         <span className="font-bold" style={{ color: detail.worstDeclared > 30 ? C.red : C.text }}>
           {detail.worstLocationName.replace('Bahandi ', '')}
@@ -241,11 +241,11 @@ function UnitCard({ detail }: UnitCardProps) {
       </div>
 
       {/* Cost */}
-      <div className="mt-3 pt-3 border-t border-stone-100">
+      <div className="mt-3 pt-3 border-t border-card-border">
         <div className="flex items-center gap-4 flex-wrap">
           <div>
-            <div className="text-[10px] text-text-muted uppercase tracking-wide">Списано за период</div>
-            <div className="text-sm font-bold text-text-primary">{fmtMoneyFull(detail.totalCost)}</div>
+            <div className="text-[10px] text-muted uppercase tracking-wide">Списано за период</div>
+            <div className="text-sm font-bold text-charcoal">{fmtMoneyFull(detail.totalCost)}</div>
           </div>
           {detail.overNormCost > 0 && (
             <div>
@@ -259,7 +259,7 @@ function UnitCard({ detail }: UnitCardProps) {
       {/* Expand toggle */}
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="flex items-center gap-1 text-xs font-medium w-full justify-center py-1.5 mt-3 rounded-lg hover:bg-stone-50 transition-colors"
+        className="flex items-center gap-1 text-xs font-medium w-full justify-center py-1.5 mt-3 rounded-lg hover:bg-surface transition-colors"
         style={{ color: C.muted }}
       >
         {expanded ? (
@@ -276,7 +276,7 @@ function UnitCard({ detail }: UnitCardProps) {
       </button>
 
       {expanded && (
-        <div className="mt-2 pt-2 border-t border-stone-100">
+        <div className="mt-2 pt-2 border-t border-card-border">
           {detail.locations.map((loc) => (
             <LocationRow key={loc.locationName} loc={loc} norm={detail.norm} isUnit />
           ))}
@@ -298,7 +298,7 @@ interface SummaryTileProps {
 function SummaryTile({ label, value, sub, accent }: SummaryTileProps) {
   return (
     <div className="card p-4 flex flex-col gap-1">
-      <div className="text-xs text-text-muted">{label}</div>
+      <div className="text-xs text-muted">{label}</div>
       <div className="text-xl font-black" style={{ color: accent ?? C.text }}>{value}</div>
       {sub && <div className="text-[11px]" style={{ color: C.muted }}>{sub}</div>}
     </div>
@@ -324,7 +324,7 @@ export default function ProductsView() {
 
   if (loading || !details) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-24 text-text-muted">
+      <div className="flex flex-col items-center justify-center gap-3 py-24 text-muted">
         <Loader2 className="w-7 h-7 animate-spin" style={{ color: C.amber }} />
         <span className="text-sm">Загрузка…</span>
       </div>
@@ -345,12 +345,12 @@ export default function ProductsView() {
     <div className="max-w-7xl mx-auto px-6 py-6">
       {/* ── Page header ── */}
       <div className="mb-6">
-        <h2 className="text-xl font-black text-text-primary mb-1">Продукты</h2>
-        <p className="text-sm text-text-muted leading-relaxed max-w-2xl">
+        <h2 className="text-xl font-black text-charcoal mb-1">Продукты</h2>
+        <p className="text-sm text-muted leading-relaxed max-w-2xl">
           Где именно течёт товар. Два контура контроля:{' '}
-          <strong className="text-text-primary">весовой</strong>{' '}
+          <strong className="text-charcoal">весовой</strong>{' '}
           (норма отхода) и{' '}
-          <strong className="text-text-primary">штучный</strong>{' '}
+          <strong className="text-charcoal">штучный</strong>{' '}
           (сверка с продажами).
         </p>
       </div>
@@ -383,8 +383,8 @@ export default function ProductsView() {
         <div className="flex items-center gap-3 mb-4">
           <Scale className="w-5 h-5" style={{ color: C.amberDark }} />
           <div>
-            <h3 className="text-base font-bold text-text-primary">Контур 1 — весовой</h3>
-            <p className="text-xs text-text-muted">
+            <h3 className="text-base font-bold text-charcoal">Контур 1 — весовой</h3>
+            <p className="text-xs text-muted">
               Помидоры, капуста, соусы и другие ингредиенты. Контроль по норме отхода —
               если заявлено больше нормы, это флаг.
             </p>
@@ -398,7 +398,7 @@ export default function ProductsView() {
         </div>
 
         {weightDetails.length === 0 && (
-          <div className="text-sm text-text-muted py-8 text-center">Нет данных по весовым продуктам</div>
+          <div className="text-sm text-muted py-8 text-center">Нет данных по весовым продуктам</div>
         )}
       </div>
 
@@ -409,8 +409,8 @@ export default function ProductsView() {
         <div className="flex items-center gap-3 mb-4">
           <Package className="w-5 h-5" style={{ color: C.amber }} />
           <div>
-            <h3 className="text-base font-bold text-text-primary">Контур 2 — штучный</h3>
-            <p className="text-xs text-text-muted">
+            <h3 className="text-base font-bold text-charcoal">Контур 2 — штучный</h3>
+            <p className="text-xs text-muted">
               Котлеты, булки, упаковки. Штучные товары контролируются сверкой проданных
               штук со списанными, а не нормой отхода.
             </p>
@@ -424,15 +424,15 @@ export default function ProductsView() {
         </div>
 
         {unitDetails.length === 0 && (
-          <div className="text-sm text-text-muted py-8 text-center">Нет данных по штучным продуктам</div>
+          <div className="text-sm text-muted py-8 text-center">Нет данных по штучным продуктам</div>
         )}
       </div>
 
       {/* ── Info block ── */}
       <div className="bg-offwhite rounded-2xl px-5 py-4 flex items-start gap-3">
         <Info className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: C.muted }} />
-        <div className="text-xs leading-relaxed text-text-muted">
-          <strong className="text-text-primary">Почему два контура?</strong>{' '}
+        <div className="text-xs leading-relaxed text-muted">
+          <strong className="text-charcoal">Почему два контура?</strong>{' '}
           Котлету можно посчитать штуками и сверить с чеками — это точный метод.
           Помидор или соус списывается по весу в ходе приготовления, поэтому здесь работает
           норма отхода: допустимый % потерь при обработке. Если списание превышает норму —

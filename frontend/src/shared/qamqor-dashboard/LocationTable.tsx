@@ -1,4 +1,4 @@
-import { AlertTriangle, MapPin, ChevronRight, ShieldAlert, SearchX } from 'lucide-react';
+﻿import { AlertTriangle, MapPin, ChevronRight, ShieldAlert, SearchX } from 'lucide-react';
 import { useDashboard } from 'shared/qamqor-context/DashboardContext';
 import { useInvestigations } from 'shared/qamqor-context/InvestigationsContext';
 import { fmtMoney } from 'shared/qamqor-data/format';
@@ -42,9 +42,9 @@ export default function LocationTable({
   if (rows.length === 0) {
     return (
       <div className="card p-10 flex flex-col items-center text-center">
-        <SearchX className="w-8 h-8 text-text-faint mb-2" />
-        <p className="text-sm font-medium text-text-primary">Ничего не найдено</p>
-        <p className="text-xs text-text-muted mt-1">Измените фильтры или сбросьте их.</p>
+        <SearchX className="w-8 h-8 text-muted mb-2" />
+        <p className="text-sm font-medium text-charcoal">Ничего не найдено</p>
+        <p className="text-xs text-muted mt-1">Измените фильтры или сбросьте их.</p>
       </div>
     );
   }
@@ -60,7 +60,7 @@ export default function LocationTable({
             <button
               key={stat.locationId}
               onClick={() => onSelect(stat.locationId)}
-              className="w-full flex items-center gap-4 p-4 text-left transition-colors hover:bg-stone-50"
+              className="w-full flex items-center gap-4 p-4 text-left transition-colors hover:bg-surface"
               style={{
                 background: active ? '#F6F3EE' : '#fff',
                 borderLeft: isRed ? `4px solid ${C.red}` : '4px solid transparent',
@@ -76,17 +76,17 @@ export default function LocationTable({
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-text-primary">{stat.locationName}</span>
+                  <span className="font-bold text-charcoal">{stat.locationName}</span>
                   {isRed && (
                     <span className="badge badge-red"><AlertTriangle className="w-3 h-3" />Хищение</span>
                   )}
                   {inv && (
-                    <span className="badge badge-amber">
+                    <span className="badge badge-orange">
                       <ShieldAlert className="w-3 h-3" />{INVESTIGATION_STATUS_LABELS[inv.status]}
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-text-muted mt-0.5">
+                <div className="flex items-center gap-1.5 text-xs text-muted mt-0.5">
                   <MapPin className="w-3 h-3" />{stat.district}
                 </div>
               </div>
@@ -95,18 +95,18 @@ export default function LocationTable({
                 <div className="text-xl font-black" style={{ color: varianceColor(stat.variancePercent) }}>
                   {stat.variancePercent}%
                 </div>
-                <div className="text-xs text-text-muted">AvT variance</div>
+                <div className="text-xs text-muted">AvT variance</div>
               </div>
 
               <div className="text-right flex-shrink-0 w-24 hidden md:block">
-                <div className={`text-sm font-bold ${isRed ? 'text-theft' : 'text-text-muted'}`}>
+                <div className={`text-sm font-bold ${isRed ? 'text-red' : 'text-muted'}`}>
                   {fmtMoney(stat.unexplainedDeficit)}
                 </div>
-                <div className="text-xs text-text-muted">необъяснённо</div>
+                <div className="text-xs text-muted">необъяснённо</div>
               </div>
 
               <div className="w-28 hidden lg:block">
-                <div className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-surface rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full"
                     style={{ width: `${Math.min(stat.variancePercent / 7 * 100, 100)}%`, background: varianceColor(stat.variancePercent) }}
@@ -114,7 +114,7 @@ export default function LocationTable({
                 </div>
               </div>
 
-              <ChevronRight className="w-4 h-4 text-text-muted flex-shrink-0" />
+              <ChevronRight className="w-4 h-4 text-muted flex-shrink-0" />
             </button>
           );
         })}

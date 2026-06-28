@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Users, AlertTriangle, ChevronRight, Search, ArrowUpDown } from 'lucide-react';
 import { useDashboard, useAsyncData } from 'shared/qamqor-context/DashboardContext';
 import { fmtMoney } from 'shared/qamqor-data/format';
@@ -42,8 +42,8 @@ export default function EmployeesView({ onOpenEmployee }: { onOpenEmployee: (id:
     <div className="flex flex-col gap-5">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-black text-text-primary">Сотрудники</h1>
-        <p className="text-text-muted text-sm mt-0.5">
+        <h1 className="text-2xl font-black text-charcoal">Сотрудники</h1>
+        <p className="text-muted text-sm mt-0.5">
           Реестр сети · сортировка по риску. Клик по строке — полное досье человека.
         </p>
       </div>
@@ -59,21 +59,21 @@ export default function EmployeesView({ onOpenEmployee }: { onOpenEmployee: (id:
       <div className="card p-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 bg-offwhite rounded-xl px-3 py-2 flex-1 min-w-[160px]">
-            <Search className="w-3.5 h-3.5 text-text-muted flex-shrink-0" />
+            <Search className="w-3.5 h-3.5 text-muted flex-shrink-0" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Поиск сотрудника…"
-              className="bg-transparent text-sm text-text-primary placeholder:text-text-faint outline-none w-full"
+              className="bg-transparent text-sm text-charcoal placeholder:text-muted outline-none w-full"
             />
           </div>
-          <div className="flex items-center gap-1.5 text-text-muted text-sm px-1">
+          <div className="flex items-center gap-1.5 text-muted text-sm px-1">
             <ArrowUpDown className="w-3.5 h-3.5" />
           </div>
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SortKey)}
-            className="bg-offwhite text-sm text-text-primary rounded-xl px-3 py-2 outline-none border-none cursor-pointer"
+            className="bg-offwhite text-sm text-charcoal rounded-xl px-3 py-2 outline-none border-none cursor-pointer"
           >
             <option value="multiplier">По кратности риска</option>
             <option value="amount">По сумме списаний</option>
@@ -84,13 +84,13 @@ export default function EmployeesView({ onOpenEmployee }: { onOpenEmployee: (id:
 
       {/* Table */}
       {loading && !employees ? (
-        <div className="card p-10 text-center text-text-muted">Загрузка реестра…</div>
+        <div className="card p-10 text-center text-muted">Загрузка реестра…</div>
       ) : list.length === 0 ? (
-        <div className="card p-10 text-center text-text-muted">Никого не найдено</div>
+        <div className="card p-10 text-center text-muted">Никого не найдено</div>
       ) : (
         <div className="card overflow-hidden">
           {/* head */}
-          <div className="hidden md:flex items-center gap-4 px-4 py-2.5 text-xs text-text-muted border-b border-stone-100 bg-offwhite/50">
+          <div className="hidden md:flex items-center gap-4 px-4 py-2.5 text-xs text-muted border-b border-card-border bg-offwhite/50">
             <span className="w-7 flex-shrink-0">#</span>
             <span className="flex-1">Сотрудник</span>
             <span className="w-24 text-right">Кратность</span>
@@ -107,7 +107,7 @@ export default function EmployeesView({ onOpenEmployee }: { onOpenEmployee: (id:
                 <button
                   key={e.employeeId}
                   onClick={() => onOpenEmployee(e.employeeId)}
-                  className="w-full flex items-center gap-4 p-4 text-left transition-colors hover:bg-stone-50"
+                  className="w-full flex items-center gap-4 p-4 text-left transition-colors hover:bg-surface"
                   style={{ borderLeft: r === 'high' ? `4px solid ${C.red}` : '4px solid transparent' }}
                 >
                   <span
@@ -118,12 +118,12 @@ export default function EmployeesView({ onOpenEmployee }: { onOpenEmployee: (id:
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-text-primary">{e.employeeName}</span>
+                      <span className="font-bold text-charcoal">{e.employeeName}</span>
                       {e.flags.includes('duplicate-photo') && (
                         <span className="badge badge-red text-[10px] px-1.5 py-0"><AlertTriangle className="w-2.5 h-2.5" />дубль фото</span>
                       )}
                     </div>
-                    <div className="text-xs text-text-muted mt-0.5">{e.locationName.replace('Bahandi ', '')}</div>
+                    <div className="text-xs text-muted mt-0.5">{e.locationName.replace('Bahandi ', '')}</div>
                   </div>
                   <div className="w-24 text-right flex-shrink-0">
                     <span className="text-lg font-black" style={{ color: e.medianMultiplier > 2 ? C.red : e.medianMultiplier >= 1.5 ? C.amberDark : C.text }}>
@@ -131,13 +131,13 @@ export default function EmployeesView({ onOpenEmployee }: { onOpenEmployee: (id:
                     </span>
                   </div>
                   <div className="w-28 text-right flex-shrink-0 hidden md:block">
-                    <span className="text-sm font-bold text-text-primary">{fmtMoney(e.totalWriteOffs)}</span>
+                    <span className="text-sm font-bold text-charcoal">{fmtMoney(e.totalWriteOffs)}</span>
                   </div>
-                  <div className="w-20 text-right flex-shrink-0 hidden md:block text-sm text-text-muted">{e.writeOffCount}</div>
+                  <div className="w-20 text-right flex-shrink-0 hidden md:block text-sm text-muted">{e.writeOffCount}</div>
                   <div className="w-20 flex justify-end flex-shrink-0">
                     <span className="badge text-[10px]" style={{ background: rs.bg, color: rs.color }}>{rs.label}</span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-text-muted flex-shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-muted flex-shrink-0" />
                 </button>
               );
             })}
@@ -145,7 +145,7 @@ export default function EmployeesView({ onOpenEmployee }: { onOpenEmployee: (id:
         </div>
       )}
 
-      <div className="flex items-center gap-2 text-xs text-text-muted">
+      <div className="flex items-center gap-2 text-xs text-muted">
         <Users className="w-3.5 h-3.5" />
         Медиана списаний по сотруднику сети: {fmtMoney(45000)} / мес. Кратность = во сколько раз человек выше медианы.
       </div>
@@ -157,8 +157,8 @@ function Tile({ label, value, color, sub }: { label: string; value: string; colo
   return (
     <div className="card p-4">
       <div className="text-2xl font-black" style={{ color }}>{value}</div>
-      <div className="text-xs text-text-muted mt-0.5">{label}</div>
-      {sub && <div className="text-[10px] text-text-faint mt-0.5">{sub}</div>}
+      <div className="text-xs text-muted mt-0.5">{label}</div>
+      {sub && <div className="text-[10px] text-muted mt-0.5">{sub}</div>}
     </div>
   );
 }

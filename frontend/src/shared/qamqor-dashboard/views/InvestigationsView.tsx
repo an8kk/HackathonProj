@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   AlertTriangle,
   Camera,
@@ -33,7 +33,7 @@ interface Props {
 
 const STATUS_BADGE: Record<InvestigationStatus, string> = {
   open: 'badge-red',
-  in_progress: 'badge-amber',
+  in_progress: 'badge-orange',
   closed: 'badge-green',
 };
 
@@ -79,15 +79,15 @@ function InvestigationCard({ inv, onOpenLocation }: InvestigationCardProps) {
   }
 
   return (
-    <div className="rounded-2xl border border-stone-100 bg-white overflow-hidden shadow-sm">
+    <div className="rounded-2xl border border-card-border bg-white overflow-hidden shadow-sm">
       {/* Header row */}
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-start gap-3 p-4 text-left hover:bg-stone-50 transition-colors"
+        className="w-full flex items-start gap-3 p-4 text-left hover:bg-surface transition-colors"
       >
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-bold text-text-primary">
+            <span className="text-sm font-bold text-charcoal">
               {inv.locationName.replace('Bahandi ', '')}
             </span>
             <span className={`badge ${STATUS_BADGE[inv.status]} flex items-center gap-1`}>
@@ -95,7 +95,7 @@ function InvestigationCard({ inv, onOpenLocation }: InvestigationCardProps) {
               {INVESTIGATION_STATUS_LABELS[inv.status]}
             </span>
           </div>
-          <p className="text-xs text-text-muted mt-0.5 truncate">{inv.reason}</p>
+          <p className="text-xs text-muted mt-0.5 truncate">{inv.reason}</p>
         </div>
         <button
           onClick={(e) => {
@@ -110,19 +110,19 @@ function InvestigationCard({ inv, onOpenLocation }: InvestigationCardProps) {
 
       {/* Expanded body */}
       {expanded && (
-        <div className="px-4 pb-4 pt-1 border-t border-stone-100 space-y-3">
+        <div className="px-4 pb-4 pt-1 border-t border-card-border space-y-3">
           {/* Details grid */}
           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-            <span className="text-text-muted">Ответственный</span>
-            <span className="font-medium text-text-primary text-right">
+            <span className="text-muted">Ответственный</span>
+            <span className="font-medium text-charcoal text-right">
               {inv.assignee.split(' — ')[0]}
             </span>
-            <span className="text-text-muted">Недостача</span>
+            <span className="text-muted">Недостача</span>
             <span className="font-bold text-right" style={{ color: C.red }}>
               {fmtMoney(inv.deficitAtOpen)}
             </span>
-            <span className="text-text-muted">Открыто</span>
-            <span className="font-medium text-text-primary text-right">
+            <span className="text-muted">Открыто</span>
+            <span className="font-medium text-charcoal text-right">
               {fmtDateTime(inv.openedAt)}
             </span>
           </div>
@@ -132,8 +132,8 @@ function InvestigationCard({ inv, onOpenLocation }: InvestigationCardProps) {
             <div className="space-y-1.5">
               {inv.notes.map((n) => (
                 <div key={n.id} className="bg-offwhite rounded-xl px-3 py-2 text-xs">
-                  <p className="text-text-primary">{n.text}</p>
-                  <p className="text-text-faint mt-0.5">
+                  <p className="text-charcoal">{n.text}</p>
+                  <p className="text-muted mt-0.5">
                     {n.author.split(' — ')[0]} · {fmtDateTime(n.createdAt)}
                   </p>
                 </div>
@@ -208,14 +208,14 @@ function AnomalyRow({ anomaly, onOpenLocation }: AnomalyRowProps) {
       )}
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <span className="text-xs font-semibold text-text-primary truncate">
+          <span className="text-xs font-semibold text-charcoal truncate">
             {anomaly.locationName.replace('Bahandi ', '')}
           </span>
-          <span className="text-xs text-text-muted flex-shrink-0">
+          <span className="text-xs text-muted flex-shrink-0">
             {anomaly.date} {anomaly.time}
           </span>
         </div>
-        <p className="text-xs text-text-primary mt-0.5 leading-relaxed">{anomaly.text}</p>
+        <p className="text-xs text-charcoal mt-0.5 leading-relaxed">{anomaly.text}</p>
       </div>
     </div>
   );
@@ -232,11 +232,11 @@ function PhotoDuplicatesCard({ onOpenEmployee }: PhotoDuplicatesCardProps) {
     <div className="card p-5">
       <div className="flex items-center gap-2 mb-4">
         <Copy className="w-4 h-4 flex-shrink-0" style={{ color: C.red }} />
-        <h3 className="text-sm font-bold text-text-primary">Дубликаты фото</h3>
+        <h3 className="text-sm font-bold text-charcoal">Дубликаты фото</h3>
       </div>
 
       {/* Evidence block */}
-      <div className="bg-theft-light rounded-xl p-3 mb-3">
+      <div className="bg-red-light rounded-xl p-3 mb-3">
         <div className="flex items-center gap-3">
           {/* Overlapping photo squares */}
           <div className="flex flex-shrink-0 -space-x-3">
@@ -256,9 +256,9 @@ function PhotoDuplicatesCard({ onOpenEmployee }: PhotoDuplicatesCardProps) {
 
           {/* Labels */}
           <div className="min-w-0">
-            <p className="text-xs font-bold text-text-primary">Идентичный снимок</p>
-            <p className="text-xs text-text-muted mt-0.5">req-001 и req-002</p>
-            <p className="text-xs text-text-muted">Асан Е. · Сарыарка</p>
+            <p className="text-xs font-bold text-charcoal">Идентичный снимок</p>
+            <p className="text-xs text-muted mt-0.5">req-001 и req-002</p>
+            <p className="text-xs text-muted">Асан Е. · Сарыарка</p>
           </div>
         </div>
       </div>
@@ -270,7 +270,7 @@ function PhotoDuplicatesCard({ onOpenEmployee }: PhotoDuplicatesCardProps) {
         Открыть досье Асана
       </button>
 
-      <p className="text-xs text-text-muted leading-relaxed">
+      <p className="text-xs text-muted leading-relaxed">
         Одно фото в двух заявках с разницей 33 минуты — признак фиктивного списания.
       </p>
     </div>
@@ -295,8 +295,8 @@ export default function InvestigationsView({ onOpenLocation, onOpenEmployee }: P
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-black text-text-primary">Расследования</h2>
-          <p className="text-sm text-text-muted mt-0.5">
+          <h2 className="text-xl font-black text-charcoal">Расследования</h2>
+          <p className="text-sm text-muted mt-0.5">
             Сигналы системы и активные дела по подозрительным точкам
           </p>
         </div>
@@ -304,8 +304,8 @@ export default function InvestigationsView({ onOpenLocation, onOpenEmployee }: P
         {/* Counter tiles */}
         <div className="flex gap-3 flex-wrap">
           <div className="card px-4 py-2.5 flex flex-col items-center min-w-[72px]">
-            <span className="text-lg font-black text-text-primary">{investigations.length}</span>
-            <span className="text-xs text-text-muted leading-tight text-center">Всего дел</span>
+            <span className="text-lg font-black text-charcoal">{investigations.length}</span>
+            <span className="text-xs text-muted leading-tight text-center">Всего дел</span>
           </div>
           <div className="card px-4 py-2.5 flex flex-col items-center min-w-[72px]">
             <span
@@ -314,7 +314,7 @@ export default function InvestigationsView({ onOpenLocation, onOpenEmployee }: P
             >
               {openCount}
             </span>
-            <span className="text-xs text-text-muted leading-tight text-center">Открытых</span>
+            <span className="text-xs text-muted leading-tight text-center">Открытых</span>
           </div>
           <div className="card px-4 py-2.5 flex flex-col items-center min-w-[72px]">
             <span
@@ -323,7 +323,7 @@ export default function InvestigationsView({ onOpenLocation, onOpenEmployee }: P
             >
               {theftCount}
             </span>
-            <span className="text-xs text-text-muted leading-tight text-center">Сигналов</span>
+            <span className="text-xs text-muted leading-tight text-center">Сигналов</span>
           </div>
         </div>
       </div>
@@ -332,20 +332,20 @@ export default function InvestigationsView({ onOpenLocation, onOpenEmployee }: P
       <div className="card p-5">
         <div className="flex items-center gap-2 mb-1">
           <Folder className="w-4 h-4" style={{ color: C.amberDark }} />
-          <h3 className="text-sm font-bold text-text-primary">Активные расследования</h3>
+          <h3 className="text-sm font-bold text-charcoal">Активные расследования</h3>
           {investigations.length > 0 && (
-            <span className="badge badge-ink ml-auto">{investigations.length}</span>
+            <span className="badge badge-muted ml-auto">{investigations.length}</span>
           )}
         </div>
-        <p className="text-xs text-text-muted mb-4">Открываются по подозрительным точкам</p>
+        <p className="text-xs text-muted mb-4">Открываются по подозрительным точкам</p>
 
         {investigations.length === 0 ? (
           <div className="flex flex-col items-center text-center py-8 px-4">
             <div className="w-12 h-12 rounded-full bg-offwhite flex items-center justify-center mb-3">
-              <Plus className="w-6 h-6 text-text-faint" />
+              <Plus className="w-6 h-6 text-muted" />
             </div>
-            <p className="text-sm font-semibold text-text-primary">Пока нет расследований</p>
-            <p className="text-xs text-text-muted mt-1.5 leading-relaxed max-w-xs">
+            <p className="text-sm font-semibold text-charcoal">Пока нет расследований</p>
+            <p className="text-xs text-muted mt-1.5 leading-relaxed max-w-xs">
               Откройте расследование по красной точке — кнопка в карточке точки и в её деталях.
             </p>
           </div>
@@ -368,7 +368,7 @@ export default function InvestigationsView({ onOpenLocation, onOpenEmployee }: P
         <div className="card p-5">
           <div className="flex items-center gap-2 mb-4">
             <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: C.red }} />
-            <h3 className="text-sm font-bold text-text-primary">Лента аномалий</h3>
+            <h3 className="text-sm font-bold text-charcoal">Лента аномалий</h3>
             {theftCount > 0 && (
               <span className="badge badge-red ml-auto">{theftCount} сигналов</span>
             )}
@@ -376,13 +376,13 @@ export default function InvestigationsView({ onOpenLocation, onOpenEmployee }: P
 
           {anomalies === null ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-5 h-5 animate-spin text-text-muted" />
+              <Loader2 className="w-5 h-5 animate-spin text-muted" />
             </div>
           ) : anomalies.length === 0 ? (
             <div className="flex flex-col items-center text-center py-8">
               <CheckCircle2 className="w-8 h-8 mb-2" style={{ color: C.green }} />
-              <p className="text-sm font-medium text-text-primary">Аномалий нет</p>
-              <p className="text-xs text-text-muted mt-1">Сеть работает в штатном режиме</p>
+              <p className="text-sm font-medium text-charcoal">Аномалий нет</p>
+              <p className="text-xs text-muted mt-1">Сеть работает в штатном режиме</p>
             </div>
           ) : (
             <div className="space-y-2">

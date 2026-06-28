@@ -1,4 +1,4 @@
-import { C, statusColor } from 'shared/qamqor-data/colors';
+﻿import { C, statusColor } from 'shared/qamqor-data/colors';
 import type { LocationStats, LocationStatus } from 'shared/qamqor-data/types';
 
 interface MiniMapProps {
@@ -28,8 +28,8 @@ export default function MiniMap({ locations, activeId, onSelect }: MiniMapProps)
   return (
     <div className="card p-5">
       <div className="mb-3">
-        <div className="text-sm font-bold text-text-primary">Карта сети · Астана</div>
-        <div className="text-xs text-text-muted mt-0.5">Интерактивная схема точек</div>
+        <div className="text-sm font-bold text-charcoal">Карта сети · Астана</div>
+        <div className="text-xs text-muted mt-0.5">Интерактивная схема точек</div>
       </div>
 
       <svg
@@ -142,7 +142,7 @@ export default function MiniMap({ locations, activeId, onSelect }: MiniMapProps)
               className="w-2.5 h-2.5 rounded-full flex-shrink-0"
               style={{ background: statusColor(s) }}
             />
-            <span className="text-xs text-text-muted">{STATUS_LABELS[s]}</span>
+            <span className="text-xs text-muted">{STATUS_LABELS[s]}</span>
           </div>
         ))}
       </div>

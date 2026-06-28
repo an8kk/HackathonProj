@@ -1,4 +1,4 @@
-import { Period, PERIOD_LABELS } from 'shared/qamqor-data/types';
+﻿import { Period, PERIOD_LABELS } from 'shared/qamqor-data/types';
 
 interface PeriodSwitcherProps {
   period: Period;
@@ -18,7 +18,7 @@ export default function PeriodSwitcher({ period, onChange }: PeriodSwitcherProps
             onClick={() => onChange(p)}
             className={
               active
-                ? 'px-3 py-1.5 text-xs font-bold rounded-lg bg-amber text-ink transition-colors'
+                ? 'px-3 py-1.5 text-xs font-bold rounded-lg bg-orange text-charcoal transition-colors'
                 : 'px-3 py-1.5 text-xs font-medium rounded-lg text-white/60 hover:text-white/90 transition-colors'
             }
           >

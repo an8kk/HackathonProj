@@ -1,4 +1,4 @@
-import { Search, X } from 'lucide-react';
+﻿import { Search, X } from 'lucide-react';
 
 type SortKey = 'variance' | 'deficit' | 'name';
 type StatusFilter = 'all' | 'green' | 'amber' | 'red';
@@ -44,13 +44,13 @@ export default function Toolbar({ filters, onChange, districts, onReset }: Toolb
       <div className="flex flex-wrap items-center gap-2">
         {/* Search */}
         <div className="flex items-center gap-2 bg-offwhite rounded-xl px-3 py-2 flex-1 min-w-[160px]">
-          <Search className="w-3.5 h-3.5 text-text-muted flex-shrink-0" />
+          <Search className="w-3.5 h-3.5 text-muted flex-shrink-0" />
           <input
             type="text"
             placeholder="Поиск точки…"
             value={filters.search}
             onChange={(e) => update('search', e.target.value)}
-            className="bg-transparent text-sm text-text-primary placeholder:text-text-faint outline-none w-full"
+            className="bg-transparent text-sm text-charcoal placeholder:text-muted outline-none w-full"
           />
         </div>
 
@@ -58,7 +58,7 @@ export default function Toolbar({ filters, onChange, districts, onReset }: Toolb
         <select
           value={filters.sort}
           onChange={(e) => update('sort', e.target.value as SortKey)}
-          className="bg-offwhite text-sm text-text-primary rounded-xl px-3 py-2 outline-none border-none cursor-pointer"
+          className="bg-offwhite text-sm text-charcoal rounded-xl px-3 py-2 outline-none border-none cursor-pointer"
         >
           <option value="variance">По variance</option>
           <option value="deficit">По недостаче</option>
@@ -69,7 +69,7 @@ export default function Toolbar({ filters, onChange, districts, onReset }: Toolb
         <select
           value={filters.district}
           onChange={(e) => update('district', e.target.value)}
-          className="bg-offwhite text-sm text-text-primary rounded-xl px-3 py-2 outline-none border-none cursor-pointer"
+          className="bg-offwhite text-sm text-charcoal rounded-xl px-3 py-2 outline-none border-none cursor-pointer"
         >
           <option value="all">Все районы</option>
           {districts.map((d) => (
@@ -83,7 +83,7 @@ export default function Toolbar({ filters, onChange, districts, onReset }: Toolb
         <select
           value={filters.status}
           onChange={(e) => update('status', e.target.value as StatusFilter)}
-          className="bg-offwhite text-sm text-text-primary rounded-xl px-3 py-2 outline-none border-none cursor-pointer"
+          className="bg-offwhite text-sm text-charcoal rounded-xl px-3 py-2 outline-none border-none cursor-pointer"
         >
           <option value="all">Все статусы</option>
           <option value="green">Норма</option>
@@ -95,7 +95,7 @@ export default function Toolbar({ filters, onChange, districts, onReset }: Toolb
         {dirty && (
           <button
             onClick={onReset}
-            className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors px-3 py-2 rounded-xl hover:bg-offwhite"
+            className="flex items-center gap-1.5 text-sm text-muted hover:text-charcoal transition-colors px-3 py-2 rounded-xl hover:bg-offwhite"
           >
             <X className="w-3.5 h-3.5" />
             Сбросить

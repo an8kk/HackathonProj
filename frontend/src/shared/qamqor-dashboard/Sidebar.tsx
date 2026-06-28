@@ -1,15 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Store, Users, Package, ShieldAlert, Scale, Shield, ArrowLeft,
+  LayoutDashboard, Store, Users, Package, ShieldAlert, Scale, Utensils, ArrowLeft,
 } from 'lucide-react';
 import type { DashboardView } from 'shared/qamqor-data/types';
 import { useInvestigations } from 'shared/qamqor-context/InvestigationsContext';
 
-interface NavItem {
-  view: DashboardView;
-  label: string;
-  icon: typeof LayoutDashboard;
-}
+interface NavItem { view: DashboardView; label: string; icon: typeof LayoutDashboard; }
 
 const NAV: NavItem[] = [
   { view: 'overview', label: 'Обзор', icon: LayoutDashboard },
@@ -20,28 +16,24 @@ const NAV: NavItem[] = [
   { view: 'reconciliation', label: 'Сверка', icon: Scale },
 ];
 
-export default function Sidebar({
-  active,
-  onChange,
-}: {
-  active: DashboardView;
-  onChange: (v: DashboardView) => void;
-}) {
+export default function Sidebar({ active, onChange }: { active: DashboardView; onChange: (v: DashboardView) => void }) {
   const navigate = useNavigate();
   const { openCount } = useInvestigations();
 
   return (
-    <aside className="bg-ink text-white flex flex-col w-full lg:w-60 lg:min-h-screen lg:sticky lg:top-0 no-print">
+    <aside className="sidebar no-print">
       {/* Brand */}
-      <div className="px-5 py-5 flex items-center gap-2 border-b border-white/10">
-        <Shield className="w-5 h-5 text-amber-DEFAULT" />
-        <span className="font-black text-lg">Qamqor</span>
-        <span className="text-[10px] text-white/40 ml-auto">Bahandi</span>
+      <div className="px-5 py-4 flex items-center gap-2.5" style={{ borderBottom: '1px solid #F3F3F3' }}>
+        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#198754' }}>
+          <Utensils className="w-4 h-4 text-white" strokeWidth={2} />
+        </div>
+        <span className="font-bold text-charcoal text-[15px]">Bahandi</span>
+        <span className="text-[11px] text-muted ml-auto">Owner</span>
       </div>
 
       {/* Nav */}
-      <nav className="flex lg:flex-col gap-1 px-3 py-3 overflow-x-auto lg:overflow-visible">
-        {NAV.map((item) => {
+      <nav className="flex flex-col gap-0.5 px-3 py-3">
+        {NAV.map(item => {
           const isActive = active === item.view;
           const Icon = item.icon;
           const showBadge = item.view === 'investigations' && openCount > 0;
@@ -49,16 +41,16 @@ export default function Sidebar({
             <button
               key={item.view}
               onClick={() => onChange(item.view)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors flex-shrink-0 whitespace-nowrap"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-[14px] font-medium transition-colors"
               style={{
-                background: isActive ? 'rgba(245,163,0,0.15)' : 'transparent',
-                color: isActive ? '#F5A300' : 'rgba(255,255,255,0.65)',
+                background: isActive ? 'rgba(25,135,84,0.08)' : 'transparent',
+                color: isActive ? '#198754' : '#2B2A28',
               }}
             >
-              <Icon className="w-[18px] h-[18px] flex-shrink-0" />
+              <Icon className="w-[17px] h-[17px] flex-shrink-0" style={{ opacity: isActive ? 1 : 0.5 }} />
               <span>{item.label}</span>
               {showBadge && (
-                <span className="ml-auto text-[10px] font-bold bg-amber-DEFAULT text-ink rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
+                <span className="ml-auto text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center" style={{ background: '#DC3545', color: '#fff' }}>
                   {openCount}
                 </span>
               )}
@@ -67,13 +59,12 @@ export default function Sidebar({
         })}
       </nav>
 
-      {/* Back to home */}
       <button
         onClick={() => navigate('/')}
-        className="mt-auto hidden lg:flex items-center gap-2 px-5 py-4 text-white/40 hover:text-white text-sm transition-colors border-t border-white/10"
+        className="mt-auto flex items-center gap-2 px-5 py-4 text-[13px] text-muted hover:text-charcoal transition-colors"
+        style={{ borderTop: '1px solid #F3F3F3' }}
       >
-        <ArrowLeft className="w-4 h-4" />
-        На главную
+        <ArrowLeft className="w-4 h-4" />На главную
       </button>
     </aside>
   );

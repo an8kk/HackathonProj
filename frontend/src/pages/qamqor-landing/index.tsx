@@ -1,9 +1,10 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Smartphone, ClipboardCheck, BarChart3, ChevronRight, TrendingDown } from 'lucide-react';
+import { Smartphone, ClipboardCheck, BarChart3, ChevronRight, Lock, Utensils } from 'lucide-react';
 import { useAuth } from 'shared/auth/session';
 import { ApiError } from 'shared/api/client';
 import type { Role } from 'shared/api/types';
+
 const ROLE_ROUTES: Record<Role, string> = {
   sender: '/employee',
   reviewer: '/manager',
@@ -11,33 +12,9 @@ const ROLE_ROUTES: Record<Role, string> = {
 };
 
 const roles = [
-  {
-    path: '/employee',
-    icon: Smartphone,
-    title: 'Сотрудник',
-    subtitle: 'Подать заявку на списание',
-    desc: 'Мобильный вид · Повар Айгерим С.',
-    color: 'from-stone-700 to-stone-800',
-    accent: '#F5A300',
-  },
-  {
-    path: '/manager',
-    icon: ClipboardCheck,
-    title: 'Менеджер',
-    subtitle: 'Проверить и одобрить заявки',
-    desc: 'Рабочий стол · 3 заявки на проверке',
-    color: 'from-stone-700 to-stone-800',
-    accent: '#F5A300',
-  },
-  {
-    path: '/dashboard',
-    icon: BarChart3,
-    title: 'Владелец',
-    subtitle: 'Аналитика и контроль сети',
-    desc: 'Дашборд · 5 точек · Алматы',
-    color: 'from-stone-800 to-stone-900',
-    accent: '#F5A300',
-  },
+  { path: '/employee', icon: Smartphone, title: 'Сотрудник', subtitle: 'Подать заявку на списание' },
+  { path: '/manager', icon: ClipboardCheck, title: 'Менеджер', subtitle: 'Проверить и одобрить заявки' },
+  { path: '/dashboard', icon: BarChart3, title: 'Владелец', subtitle: 'Аналитика и контроль сети' },
 ];
 
 export default function QamqorLanding() {
@@ -47,6 +24,7 @@ export default function QamqorLanding() {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
   async function handleLogin(e: FormEvent) {
     e.preventDefault();
     if (!pin || submitting) return;
@@ -61,83 +39,67 @@ export default function QamqorLanding() {
       setSubmitting(false);
     }
   }
+
   return (
-    <div className="min-h-screen bg-ink flex flex-col items-center justify-center px-4 py-12">
-      <div
-        className="absolute inset-0 opacity-5"
-        style={{
-          backgroundImage: 'radial-gradient(circle at 25% 25%, #F5A300 0%, transparent 50%), radial-gradient(circle at 75% 75%, #F5A300 0%, transparent 50%)',
-        }}
-      />
+    <div className="min-h-screen bg-surface flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-sm flex flex-col">
 
-      <div className="relative z-10 w-full max-w-2xl mx-auto flex flex-col items-center">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-amber-DEFAULT flex items-center justify-center shadow-lg shadow-amber-DEFAULT/30">
-            <Shield className="w-8 h-8 text-ink" strokeWidth={2.5} />
+        {/* Logo */}
+        <div className="flex items-center gap-3 mb-10">
+          <div className="w-9 h-9 rounded-[10px] flex items-center justify-center" style={{ background: '#198754' }}>
+            <Utensils className="w-5 h-5 text-white" strokeWidth={2} />
           </div>
-          <div>
-            <h1 className="text-4xl font-black text-white tracking-tight">Qamqor</h1>
-            <p className="text-text-muted text-sm font-medium tracking-widest uppercase mt-0.5">Bahandi · 5 точек</p>
-          </div>
+          <span className="text-xl font-bold text-charcoal">Bahandi</span>
+          <span className="text-xl font-normal text-muted">Reporter</span>
         </div>
 
-        <div className="text-center mb-2">
-          <p className="text-2xl font-bold text-white leading-snug">
-            Форма ловит ошибку.
-          </p>
-          <p className="text-2xl font-bold leading-snug" style={{ color: '#F5A300' }}>
-            Мы ловим вора.
-          </p>
-        </div>
+        {/* Heading */}
+        <h1 className="text-2xl font-bold text-charcoal mb-1">Вход</h1>
+        <p className="text-muted text-[15px] mb-8">Введите PIN-код для входа</p>
 
-        <div className="flex gap-6 mt-6 mb-10">
-          {[
-            { label: 'Точек под контролем', value: '5' },
-            { label: 'Недостача · июнь', value: '₸812K' },
-            { label: 'Точек в красной зоне', value: '1' },
-          ].map(s => (
-            <div key={s.label} className="text-center">
-              <div className="text-2xl font-black text-amber-DEFAULT">{s.value}</div>
-              <div className="text-xs text-text-muted mt-0.5">{s.label}</div>
+        {/* Login card */}
+        <div className="card p-5 mb-6">
+          <form onSubmit={handleLogin} className="flex flex-col gap-4">
+            <div className="relative">
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+              <input
+                ref={pinRef}
+                type="password"
+                inputMode="numeric"
+                autoComplete="off"
+                value={pin}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setPin(e.target.value); setError(''); }}
+                placeholder="PIN-код"
+                maxLength={6}
+                className="input pl-10"
+              />
             </div>
-          ))}
-        </div>
 
-        <form onSubmit={handleLogin} className="w-full mb-6">
-          <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider text-center mb-2">
-            Введите PIN для входа
-          </label>
-          <div className="flex gap-2">
-            <input
-              ref={pinRef}
-              type="password"
-              inputMode="numeric"
-              autoComplete="off"
-              value={pin}
-              onChange={e => { setPin(e.target.value); setError(''); }}
-              placeholder="PIN"
-              className="flex-1 rounded-2xl px-5 py-4 text-white text-lg tracking-widest text-center outline-none"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
-            />
+            {error && (
+              <p className="text-[13px] font-medium" style={{ color: '#DC3545' }}>
+                {error === 'invalid_pin' ? 'Неверный PIN-код' : 'Не удалось войти. Проверьте подключение.'}
+              </p>
+            )}
+
             <button
               type="submit"
               disabled={!pin || submitting}
-              className="px-6 rounded-2xl font-bold text-ink transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ background: '#F5A300' }}
+              className="btn btn-primary"
             >
-              {submitting ? '…' : 'Войти'}
+              {submitting ? (
+                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : 'Войти'}
             </button>
-          </div>
-          {error && (
-            <p className="mt-2 text-center text-sm font-medium" style={{ color: '#FF6B6B' }}>
-              {error === 'invalid_pin' ? 'Неверный PIN' : `Ошибка: ${error}`}
+
+            <p className="text-[12px] text-muted">
+              Демо: <span className="font-mono">1111</span> · <span className="font-mono">2222</span> · <span className="font-mono">9999</span> · <span className="font-mono">3333</span>
             </p>
-          )}
-        </form>
-        <div className="w-full flex flex-col gap-4">
-          <p className="text-xs font-semibold text-text-muted uppercase tracking-wider text-center mb-1">
-            Роли в системе
-          </p>
+          </form>
+        </div>
+
+        {/* Role list */}
+        <p className="section-label mb-3">Роли в системе</p>
+        <div className="flex flex-col gap-2">
           {roles.map(role => {
             const Icon = role.icon;
             return (
@@ -145,42 +107,22 @@ export default function QamqorLanding() {
                 key={role.path}
                 type="button"
                 onClick={() => pinRef.current?.focus()}
-                className="w-full flex items-center gap-5 p-5 rounded-2xl text-left transition-all duration-150 hover:scale-[1.01] active:scale-[0.99]"
-                style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  backdropFilter: 'blur(8px)',
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.border = `1px solid ${role.accent}40`;
-                  (e.currentTarget as HTMLElement).style.background = 'rgba(245,163,0,0.06)';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.border = '1px solid rgba(255,255,255,0.1)';
-                  (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)';
-                }}
+                className="card-sm flex items-center gap-4 p-4 text-left w-full transition-colors hover:bg-surface-hover"
               >
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(245,163,0,0.15)' }}
-                >
-                  <Icon className="w-6 h-6" style={{ color: role.accent }} />
+                <div className="w-10 h-10 rounded-[10px] flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(25,135,84,0.1)' }}>
+                  <Icon className="w-5 h-5" style={{ color: '#198754' }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-white font-bold text-lg">{role.title}</div>
-                  <div className="text-white/70 text-sm mt-0.5">{role.subtitle}</div>
-                  <div className="text-text-muted text-xs mt-1">{role.desc}</div>
+                  <div className="font-semibold text-charcoal text-[15px]">{role.title}</div>
+                  <div className="text-muted text-[13px] mt-0.5">{role.subtitle}</div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-text-muted flex-shrink-0" />
+                <ChevronRight className="w-4 h-4 text-muted flex-shrink-0" />
               </button>
             );
           })}
         </div>
 
-        <div className="mt-10 flex items-center gap-2 text-text-muted text-xs">
-          <TrendingDown className="w-3.5 h-3.5" />
-          <span>Данные засеяны · вход по PIN через бэкенд</span>
-        </div>
+        <p className="text-[12px] text-muted text-center mt-10">Bahandi Burger © 2025</p>
       </div>
     </div>
   );

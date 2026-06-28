@@ -35,16 +35,16 @@ export default function QamqorDashboard() {
   const openEmployee = (id: string) => setEmployeeId(id);
 
   return (
-    <div className="min-h-screen bg-offwhite lg:flex">
+    <div className="min-h-screen bg-surface lg:flex">
       <Sidebar active={view} onChange={setView} />
 
       <main className="flex-1 min-w-0">
-        <div className="sticky top-0 z-30 bg-offwhite/90 backdrop-blur border-b border-stone-100 px-5 lg:px-8 py-3 flex items-center justify-between gap-4 no-print">
-          <button onClick={() => navigate('/')} className="lg:hidden flex items-center gap-1.5 text-text-muted text-sm">
+        <div className="topbar justify-between no-print">
+          <button onClick={() => navigate('/')} className="lg:hidden btn btn-ghost p-1.5 -ml-1">
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <div className="hidden lg:block text-sm text-text-muted">
-            Дашборд владельца · <span className="text-text-primary font-medium">{PERIOD_LABELS[period]}</span>
+          <div className="hidden lg:block text-[13px] text-muted">
+            Дашборд владельца · <span className="text-charcoal font-semibold">{PERIOD_LABELS[period]}</span>
           </div>
           <div className="flex items-center gap-3 flex-wrap justify-end">
             <ExportBar requests={requests} locations={locations} period={period} />

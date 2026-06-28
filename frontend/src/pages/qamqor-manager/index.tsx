@@ -2,16 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CheckCircle2, XCircle, AlertTriangle, Clock, Camera,
-  ChevronDown, ChevronUp, ArrowLeft, Shield,
-  Copy, Package,
+  ChevronDown, ChevronUp, ArrowLeft, Package, Copy, Utensils,
 } from 'lucide-react';
 import { useAuth } from 'shared/auth/session';
 import { apiClient, ApiError } from 'shared/api/client';
 import IntegrationStatus from 'widgets/integration-status';
 import type { WriteOffRequest } from 'shared/qamqor-data/types';
-import type {
-  EmployeeDto, OutletDto, ProductDto, ReasonCode, WriteOffDto,
-} from 'shared/api/types';
+import type { EmployeeDto, OutletDto, ProductDto, ReasonCode, WriteOffDto } from 'shared/api/types';
+
 const REASON_LABELS: Record<ReasonCode, string> = {
   DAMAGED: 'Брак',
   EXPIRED: 'Истёк срок годности',
@@ -20,7 +18,7 @@ const REASON_LABELS: Record<ReasonCode, string> = {
   DROPPED: 'Упал/разбился',
   OTHER: 'Другое',
 };
-// Backend write-off + reference data → the UI shape RequestCard already renders.
+
 function toUiRequest(
   dto: WriteOffDto,
   products: Map<string, ProductDto>,
@@ -56,10 +54,10 @@ function toUiRequest(
 }
 
 const FLAG_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  'exceeds-norm': { label: 'Превышение нормы отхода', color: '#D62828', bg: '#FDE8E8' },
-  'duplicate-photo': { label: 'Дубликат фото', color: '#D62828', bg: '#FDE8E8' },
-  'anomaly-employee': { label: 'Аномалия по сотруднику', color: '#C47F00', bg: '#FFF3CC' },
-  'supplier-anomaly': { label: 'Брак поставщика > нормы по сети', color: '#C47F00', bg: '#FFF3CC' },
+  'exceeds-norm': { label: 'Превышение нормы', color: '#DC3545', bg: 'rgba(220,53,69,0.08)' },
+  'duplicate-photo': { label: 'Дубликат фото', color: '#DC3545', bg: 'rgba(220,53,69,0.08)' },
+  'anomaly-employee': { label: 'Аномалия по сотруднику', color: '#EA5E1F', bg: 'rgba(234,94,31,0.08)' },
+  'supplier-anomaly': { label: 'Брак поставщика > нормы', color: '#EA5E1F', bg: 'rgba(234,94,31,0.08)' },
 };
 
 const REJECTION_REASONS = [
@@ -78,28 +76,26 @@ function formatDate(ts: string) {
 
 function PhotoBlock({ photoId, isDuplicate }: { photoId: string; isDuplicate: boolean }) {
   const colors: Record<string, string> = {
-    'photo-dup-A': '#FEF9C3',
-    'photo-003': '#DCFCE7',
+    'photo-dup-A': '#FEF3C7',
+    'photo-003': '#D1FAE5',
     'photo-004': '#EDE9FE',
     'photo-005': '#FCE7F3',
     'photo-006': '#E0F2FE',
   };
-  const bg = colors[photoId] || '#F6F3EE';
   return (
-    <div className="relative">
+    <div className="relative flex-shrink-0">
       <div
-        className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ background: bg }}
+        className="w-[72px] h-[72px] rounded-xl flex items-center justify-center"
+        style={{ background: colors[photoId] ?? '#F3F3F3' }}
       >
-        <Camera className="w-7 h-7 text-text-muted" />
+        <Camera className="w-6 h-6" style={{ color: '#999' }} />
       </div>
       {isDuplicate && (
         <div
-          className="absolute -top-1.5 -right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold"
-          style={{ background: '#D62828', color: '#fff' }}
+          className="absolute -top-1 -right-1 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold"
+          style={{ background: '#DC3545', color: '#fff' }}
         >
-          <Copy className="w-2.5 h-2.5" />
-          DUP
+          <Copy className="w-2.5 h-2.5" /> DUP
         </div>
       )}
     </div>
@@ -118,6 +114,8 @@ function RequestCard({ req, busy, onApprove, onReject }: RequestCardProps) {
   const [rejReason, setRejReason] = useState('');
   const isFlagged = req.flags.length > 0;
   const isDuplicate = req.flags.includes('duplicate-photo');
+  const isDeduction = req.writeOffType === 'with_deduction';
+
   function handleReject() {
     if (!rejReason) return;
     onReject(req.id, rejReason);
@@ -127,166 +125,114 @@ function RequestCard({ req, busy, onApprove, onReject }: RequestCardProps) {
   return (
     <div
       className="card overflow-hidden"
-      style={{ borderLeft: isFlagged ? '4px solid #D62828' : '4px solid transparent' }}
+      style={isFlagged ? { borderLeftColor: '#DC3545', borderLeftWidth: 3 } : {}}
     >
       <div className="p-4">
         <div className="flex gap-3">
           <PhotoBlock photoId={req.photoId} isDuplicate={isDuplicate} />
-
           <div className="flex-1 min-w-0">
             {isFlagged && (
-              <div className="flex flex-wrap gap-1.5 mb-2">
+              <div className="flex flex-wrap gap-1 mb-2">
                 {req.flags.map(f => {
                   const info = FLAG_LABELS[f];
                   if (!info) return null;
                   return (
-                    <span
-                      key={f}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
-                      style={{ background: info.bg, color: info.color }}
-                    >
-                      <AlertTriangle className="w-3 h-3" />
-                      {info.label}
+                    <span key={f} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: info.bg, color: info.color }}>
+                      <AlertTriangle className="w-3 h-3" />{info.label}
                     </span>
                   );
                 })}
               </div>
             )}
 
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="font-bold text-text-primary text-sm">{req.productName}</p>
-                <p className="text-xs text-text-muted mt-0.5">
-                  {req.quantity} {req.productType === 'unit' ? 'шт' : 'г'} · {req.reasonLabel}
-                </p>
-              </div>
+            <div className="flex items-start justify-between gap-2 mb-1.5">
+              <p className="font-bold text-charcoal text-[15px] leading-snug">{req.productName}</p>
               {req.status === 'pending' ? (
-                <span className="badge badge-amber flex-shrink-0">
-                  <Clock className="w-3 h-3" />На проверке
-                </span>
+                <span className="badge badge-orange flex-shrink-0"><Clock className="w-3 h-3" />На проверке</span>
               ) : req.status === 'approved' ? (
-                <span className="badge badge-green flex-shrink-0">
-                  <CheckCircle2 className="w-3 h-3" />Одобрено
-                </span>
+                <span className="badge badge-green flex-shrink-0"><CheckCircle2 className="w-3 h-3" />Одобрено</span>
               ) : (
-                <span className="badge badge-red flex-shrink-0">
-                  <XCircle className="w-3 h-3" />Отклонено
-                </span>
+                <span className="badge badge-red flex-shrink-0"><XCircle className="w-3 h-3" />Отклонено</span>
               )}
             </div>
 
-            <div className="flex flex-wrap gap-2 mt-2">
-              <span className="badge badge-ink">
-                <Package className="w-3 h-3" />
-                {req.stageLabel}
-              </span>
+            <p className="text-[13px] text-muted">{req.quantity} {req.productType === 'unit' ? 'шт' : 'г'} · {req.reasonLabel}</p>
+
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2">
               <span
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold"
                 style={{
-                  background: req.writeOffType === 'with_deduction' ? '#FDE8E8' : '#E8F5E9',
-                  color: req.writeOffType === 'with_deduction' ? '#D62828' : '#2E7D32',
+                  background: isDeduction ? 'rgba(220,53,69,0.08)' : 'rgba(25,135,84,0.08)',
+                  color: isDeduction ? '#DC3545' : '#198754',
                 }}
               >
-                {req.writeOffType === 'with_deduction' ? 'С удержанием' : 'Без удержания'}
-                {!req.aiSuggestedType && ' · ручной выбор'}
+                <Package className="w-3 h-3" />
+                {isDeduction ? 'С удержанием' : 'Без удержания'}
               </span>
-              <span className="text-xs text-text-muted">{req.employeeName}</span>
-              <span className="text-xs text-text-muted">·</span>
-              <span className="text-xs text-text-muted">{req.locationName.replace('Bahandi ', '')}</span>
-              <span className="text-xs text-text-muted">·</span>
-              <span className="text-xs text-text-muted">{formatDate(req.timestamp)}</span>
+              <span className="text-[12px] text-muted">{req.employeeName}</span>
+              <span className="text-[12px] text-muted">·</span>
+              <span className="text-[12px] text-muted">{req.locationName.replace('Bahandi ', '')}</span>
+              <span className="text-[12px] text-muted">·</span>
+              <span className="text-[12px] text-muted">{formatDate(req.timestamp)}</span>
             </div>
-
-            {req.productType === 'weight' && req.wastePercent !== undefined && (
-              <div className="mt-2 flex items-center gap-2">
-                <div className="flex-1 h-1.5 bg-stone-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: `${Math.min(req.wastePercent / 30 * 100, 100)}%`,
-                      background: req.flags.includes('exceeds-norm') ? '#D62828' : '#2E7D32',
-                    }}
-                  />
-                </div>
-                <span className={`text-xs font-bold ${req.flags.includes('exceeds-norm') ? 'text-theft' : 'text-success'}`}>
-                  {req.wastePercent.toFixed(1)}%
-                </span>
-              </div>
-            )}
           </div>
         </div>
 
         <button
           onClick={() => setExpanded(e => !e)}
-          className="mt-3 flex items-center gap-1 text-xs text-text-muted hover:text-text-primary transition-colors"
+          className="mt-3 flex items-center gap-1 text-[12px] text-muted hover:text-charcoal transition-colors"
         >
           {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           {expanded ? 'Свернуть' : 'Подробнее'}
         </button>
 
         {expanded && (
-          <div className="mt-3 pt-3 border-t border-stone-100">
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs mb-3">
-              <div className="text-text-muted">Смена</div>
-              <div className="font-medium text-text-primary">{req.shift}</div>
-              <div className="text-text-muted">ID заявки</div>
-              <div className="font-mono text-text-primary">{req.id}</div>
-              <div className="text-text-muted">ID фото</div>
-              <div className="font-mono text-text-primary">{req.photoId}</div>
+          <div className="mt-3 pt-3" style={{ borderTop: '1px solid #F3F3F3' }}>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[12px] mb-3">
+              <span className="text-muted">ID заявки</span>
+              <span className="font-mono text-charcoal">{req.id}</span>
+              <span className="text-muted">ID фото</span>
+              <span className="font-mono text-charcoal">{req.photoId}</span>
             </div>
             {req.comment && (
-              <div className="text-xs text-text-muted mb-1">Комментарий сотрудника:</div>
-            )}
-            {req.comment && (
-              <p className="text-xs text-text-primary bg-offwhite rounded-lg px-3 py-2 italic">
+              <p className="text-[12px] text-charcoal bg-surface rounded-lg px-3 py-2 italic mb-2">
                 «{req.comment}»
               </p>
             )}
-
-            {req.overrideExplanation && (
-              <div className="mt-2 p-2.5 rounded-lg text-xs" style={{ background: '#FFF3CC', color: '#C47F00' }}>
-                <span className="font-semibold">Пояснение к типу удержания:</span> {req.overrideExplanation}
-              </div>
-            )}
-
-            <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-stone-50 text-xs text-text-muted">
+            <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface text-[12px] text-muted">
               <Camera className="w-3 h-3 flex-shrink-0" />
-              фото сделано в приложении · {formatDate(req.timestamp)} · {req.locationName.replace('Bahandi ', '')}
+              фото · {formatDate(req.timestamp)} · {req.locationName.replace('Bahandi ', '')}
             </div>
           </div>
         )}
 
         {req.status === 'pending' && !rejecting && (
-          <div className="flex gap-2 mt-3 pt-3 border-t border-stone-100">
-            <button onClick={() => onApprove(req.id)} disabled={busy} className="btn-success flex-1 text-sm py-2.5 disabled:opacity-40">
-              <CheckCircle2 className="w-4 h-4" />
-              Одобрить
+          <div className="flex gap-2 mt-3 pt-3" style={{ borderTop: '1px solid #F3F3F3' }}>
+            <button onClick={() => onApprove(req.id)} disabled={busy} className="btn btn-success flex-1 text-[13px] py-2.5">
+              <CheckCircle2 className="w-4 h-4" />Одобрить
             </button>
-            <button onClick={() => setRejecting(true)} disabled={busy} className="btn-danger flex-1 text-sm py-2.5 disabled:opacity-40">
-              <XCircle className="w-4 h-4" />
-              Отклонить
+            <button onClick={() => setRejecting(true)} disabled={busy} className="btn btn-danger flex-1 text-[13px] py-2.5">
+              <XCircle className="w-4 h-4" />Отклонить
             </button>
           </div>
         )}
 
         {rejecting && (
-          <div className="mt-3 pt-3 border-t border-stone-100">
-            <p className="text-xs font-semibold text-text-muted mb-2">Причина отклонения:</p>
+          <div className="mt-3 pt-3" style={{ borderTop: '1px solid #F3F3F3' }}>
+            <p className="section-label mb-2">Причина отклонения</p>
             <select
-              className="select-input text-sm mb-2"
+              className="input text-[14px] mb-2"
               value={rejReason}
               onChange={e => setRejReason(e.target.value)}
             >
               <option value="">— выберите —</option>
-              {REJECTION_REASONS.map(r => (
-                <option key={r} value={r}>{r}</option>
-              ))}
+              {REJECTION_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
             <div className="flex gap-2">
-              <button onClick={handleReject} disabled={!rejReason || busy} className="btn-danger flex-1 text-sm py-2.5 disabled:opacity-40">
+              <button onClick={handleReject} disabled={!rejReason || busy} className="btn btn-danger flex-1 py-2.5 text-[13px]">
                 Подтвердить отклонение
               </button>
-              <button onClick={() => setRejecting(false)} className="btn-secondary text-sm py-2.5 px-4">
+              <button onClick={() => setRejecting(false)} className="btn btn-secondary text-[13px] py-2.5 px-4">
                 Отмена
               </button>
             </div>
@@ -294,7 +240,7 @@ function RequestCard({ req, busy, onApprove, onReject }: RequestCardProps) {
         )}
 
         {req.status === 'rejected' && req.rejectionReason && (
-          <div className="mt-3 pt-3 border-t border-stone-100 text-xs text-theft bg-theft-light rounded-lg px-3 py-2">
+          <div className="mt-3 pt-3 text-[12px] rounded-lg px-3 py-2" style={{ borderTop: '1px solid #F3F3F3', background: 'rgba(220,53,69,0.06)', color: '#DC3545' }}>
             Отклонено: {req.rejectionReason}
           </div>
         )}
@@ -314,9 +260,11 @@ export default function QamqorManager() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+
   const loadQueue = useCallback(async () => {
     setWriteOffs(await apiClient.listWriteOffs({ status: 'pending' }));
   }, []);
+
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -334,28 +282,18 @@ export default function QamqorManager() {
         setWriteOffs(queue);
         setError('');
       })
-      .catch(err => {
-        if (active) setError(err instanceof ApiError ? err.code : 'network_error');
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+      .catch(err => { if (active) setError(err instanceof ApiError ? err.code : 'network_error'); })
+      .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
+
   const handleReview = useCallback(
     async (id: string, decision: 'approved' | 'rejected', rejectionReason?: string) => {
       const reviewerId = user?.id;
-      if (!reviewerId) {
-        setError('Сессия не найдена — войдите как проверяющий');
-        return;
-      }
+      if (!reviewerId) { setError('Сессия не найдена — войдите как проверяющий'); return; }
       setBusyId(id);
       try {
-        await apiClient.reviewWriteOff(id, {
-          reviewer_id: reviewerId,
-          decision,
-          rejection_reason: rejectionReason,
-        });
+        await apiClient.reviewWriteOff(id, { reviewer_id: reviewerId, decision, rejection_reason: rejectionReason });
         await loadQueue();
         setError('');
       } catch (err) {
@@ -366,57 +304,68 @@ export default function QamqorManager() {
     },
     [user, loadQueue],
   );
+
   const uiRequests = useMemo(
     () => writeOffs.map(dto => toUiRequest(dto, products, employees, outlets)),
     [writeOffs, products, employees, outlets],
   );
-  const flaggedCount = uiRequests.filter(r => r.writeOffType === 'with_deduction').length;
-  const noDeductionCount = uiRequests.length - flaggedCount;
-  const sorted = [...uiRequests].sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-  );
-  const filtered = sorted.filter(r =>
-    filter === 'flagged' ? r.writeOffType === 'with_deduction' : true,
-  );
+  const withDeduction = uiRequests.filter(r => r.writeOffType === 'with_deduction').length;
+  const sorted = [...uiRequests].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const filtered = sorted.filter(r => filter === 'flagged' ? r.writeOffType === 'with_deduction' : true);
+
   return (
-    <div className="min-h-screen bg-offwhite">
-      <div className="bg-ink text-white">
-        <div className="max-w-5xl mx-auto px-6 py-4">
-          <div className="flex items-center gap-4 mb-4">
-            <button onClick={() => navigate('/')} className="flex items-center gap-1.5 text-white/50 hover:text-white transition-colors text-sm">
-              <ArrowLeft className="w-4 h-4" />
-              На главную
-            </button>
-            <div className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-amber-DEFAULT" />
-              <span className="font-bold text-sm text-white/80">Qamqor</span>
+    <div className="min-h-screen bg-surface">
+      {/* Top bar */}
+      <div className="topbar">
+        <button onClick={() => navigate('/')} className="btn btn-ghost p-1.5 -ml-1">
+          <ArrowLeft className="w-4 h-4" />
+        </button>
+        <div className="flex items-center gap-2 flex-1">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: '#198754' }}>
+            <Utensils className="w-4 h-4 text-white" strokeWidth={2} />
+          </div>
+          <span className="font-bold text-charcoal text-[15px]">Кабинет проверяющего</span>
+        </div>
+        <span className="text-[13px] text-muted">{user?.name ?? ''}</span>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        {/* Stats */}
+        <div className="card p-5 mb-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="font-bold text-charcoal text-lg">Очередь проверки</p>
+              <p className="text-[13px] text-muted mt-0.5">Bahandi · все точки</p>
+            </div>
+            <div className="avatar w-10 h-10 text-[15px]">
+              {(user?.name ?? 'М').split(' ').map(n => n[0]).join('').slice(0, 2)}
             </div>
           </div>
-          <h1 className="text-2xl font-black">Кабинет проверяющего</h1>
-          <p className="text-text-muted text-sm mt-0.5">Bahandi · все точки · Алматы</p>
-          <div className="flex gap-6 mt-5">
+          <div className="flex gap-6">
             {[
-              { label: 'Новых', value: uiRequests.length, color: '#F5A300' },
-              { label: 'С удержанием', value: flaggedCount, color: '#D62828' },
-              { label: 'Без удержания', value: noDeductionCount, color: '#2E7D32' },
+              { label: 'На проверке', value: uiRequests.length, color: '#EA5E1F' },
+              { label: 'С удержанием', value: withDeduction, color: '#DC3545' },
+              { label: 'Без удержания', value: uiRequests.length - withDeduction, color: '#198754' },
             ].map(s => (
               <div key={s.label}>
-                <div className="text-3xl font-black" style={{ color: s.color }}>{s.value}</div>
-                <div className="text-xs text-text-muted mt-0.5">{s.label}</div>
+                <div className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</div>
+                <div className="text-[12px] text-muted mt-0.5">{s.label}</div>
               </div>
             ))}
           </div>
         </div>
-      </div>
-      <div className="max-w-5xl mx-auto px-6 py-6">
+
         <div className="mb-5">
           <IntegrationStatus />
         </div>
+
         {error && (
-          <div className="mb-5 px-4 py-3 rounded-xl text-sm font-medium text-theft bg-theft-light">
+          <div className="mb-4 px-4 py-3 rounded-xl text-[13px] font-medium rounded-lg" style={{ background: 'rgba(220,53,69,0.08)', color: '#DC3545' }}>
             Ошибка: {error}
           </div>
         )}
+
+        {/* Filter tabs */}
         <div className="flex gap-2 mb-5">
           {([
             { id: 'all', label: 'Все заявки' },
@@ -426,27 +375,31 @@ export default function QamqorManager() {
             <button
               key={f.id}
               onClick={() => setFilter(f.id)}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                filter === f.id
-                  ? 'bg-ink text-white'
-                  : 'bg-white text-text-muted hover:bg-stone-50'
+              className={`px-4 py-2 rounded-[10px] text-[13px] font-semibold transition-colors ${
+                filter === f.id ? 'bg-charcoal text-white' : 'bg-offwhite text-muted hover:bg-surface-hover'
               }`}
             >
               {f.label}
-              {f.id === 'flagged' && flaggedCount > 0 && (
-                <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-black bg-theft text-white">
-                  {flaggedCount}
+              {f.id === 'flagged' && withDeduction > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold bg-red text-white">
+                  {withDeduction}
                 </span>
               )}
             </button>
           ))}
         </div>
+
+        {/* List */}
         {loading ? (
-          <div className="text-center py-20 text-text-muted">Загрузка заявок…</div>
+          <div className="text-center py-20 text-muted text-[14px]">Загрузка заявок…</div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-20 text-text-muted">Нет заявок в этой категории</div>
+          <div className="card p-12 text-center">
+            <CheckCircle2 className="w-10 h-10 mx-auto mb-3" style={{ color: '#198754', opacity: 0.4 }} />
+            <p className="font-semibold text-charcoal mb-1">Нет заявок</p>
+            <p className="text-[13px] text-muted">В этой категории пусто</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {filtered.map(req => (
               <RequestCard
                 key={req.id}

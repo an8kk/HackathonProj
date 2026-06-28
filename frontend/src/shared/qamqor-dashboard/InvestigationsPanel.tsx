@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Folder, Clock, CheckCircle2, Loader2, ChevronRight, Plus, Send } from 'lucide-react';
 import { useInvestigations } from 'shared/qamqor-context/InvestigationsContext';
 import { INVESTIGATION_STATUS_LABELS } from 'shared/qamqor-data/types';
@@ -7,7 +7,7 @@ import { fmtMoney, fmtDateTime } from 'shared/qamqor-data/format';
 
 const STATUS_STYLE: Record<InvestigationStatus, { badge: string; icon: typeof Clock }> = {
   open: { badge: 'badge-red', icon: Clock },
-  in_progress: { badge: 'badge-amber', icon: Loader2 },
+  in_progress: { badge: 'badge-orange', icon: Loader2 },
   closed: { badge: 'badge-green', icon: CheckCircle2 },
 };
 
@@ -32,14 +32,14 @@ function InvestigationItem({ inv }: { inv: Investigation }) {
   const next = NEXT_STATUS[inv.status];
 
   return (
-    <div className="rounded-xl border border-stone-100 overflow-hidden">
+    <div className="rounded-xl border border-card-border overflow-hidden">
       <button
         onClick={() => setExpanded((e) => !e)}
-        className="w-full flex items-center gap-2.5 p-3 text-left hover:bg-stone-50 transition-colors"
+        className="w-full flex items-center gap-2.5 p-3 text-left hover:bg-surface transition-colors"
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-text-primary truncate">
+            <span className="text-sm font-bold text-charcoal truncate">
               {inv.locationName.replace('Bahandi ', '')}
             </span>
             <span className={`badge ${style.badge}`}>
@@ -47,20 +47,20 @@ function InvestigationItem({ inv }: { inv: Investigation }) {
               {INVESTIGATION_STATUS_LABELS[inv.status]}
             </span>
           </div>
-          <div className="text-xs text-text-muted mt-0.5 truncate">{inv.reason}</div>
+          <div className="text-xs text-muted mt-0.5 truncate">{inv.reason}</div>
         </div>
-        <ChevronRight className={`w-4 h-4 text-text-muted flex-shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+        <ChevronRight className={`w-4 h-4 text-muted flex-shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`} />
       </button>
 
       {expanded && (
-        <div className="px-3 pb-3 pt-1 border-t border-stone-100">
+        <div className="px-3 pb-3 pt-1 border-t border-card-border">
           <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs mb-2">
-            <span className="text-text-muted">Ответственный</span>
-            <span className="font-medium text-text-primary text-right">{inv.assignee.split(' — ')[0]}</span>
-            <span className="text-text-muted">Недостача</span>
-            <span className="font-bold text-theft text-right">{fmtMoney(inv.deficitAtOpen)}</span>
-            <span className="text-text-muted">Открыто</span>
-            <span className="font-medium text-text-primary text-right">{fmtDateTime(inv.openedAt)}</span>
+            <span className="text-muted">Ответственный</span>
+            <span className="font-medium text-charcoal text-right">{inv.assignee.split(' — ')[0]}</span>
+            <span className="text-muted">Недостача</span>
+            <span className="font-bold text-red text-right">{fmtMoney(inv.deficitAtOpen)}</span>
+            <span className="text-muted">Открыто</span>
+            <span className="font-medium text-charcoal text-right">{fmtDateTime(inv.openedAt)}</span>
           </div>
 
           {/* Notes */}
@@ -68,8 +68,8 @@ function InvestigationItem({ inv }: { inv: Investigation }) {
             <div className="flex flex-col gap-1.5 mb-2">
               {inv.notes.map((n) => (
                 <div key={n.id} className="text-xs bg-offwhite rounded-lg px-2.5 py-1.5">
-                  <span className="text-text-primary">{n.text}</span>
-                  <span className="text-text-faint block mt-0.5">{n.author.split(' — ')[0]} · {fmtDateTime(n.createdAt)}</span>
+                  <span className="text-charcoal">{n.text}</span>
+                  <span className="text-muted block mt-0.5">{n.author.split(' — ')[0]} · {fmtDateTime(n.createdAt)}</span>
                 </div>
               ))}
             </div>
@@ -120,22 +120,22 @@ export default function InvestigationsPanel() {
     <div className="card p-5">
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
-          <Folder className="w-4 h-4 text-amber-dark" />
-          <h3 className="text-sm font-bold text-text-primary">Расследования</h3>
+          <Folder className="w-4 h-4 text-orange-dark" />
+          <h3 className="text-sm font-bold text-charcoal">Расследования</h3>
         </div>
         {investigations.length > 0 && (
-          <span className="badge badge-ink">{investigations.length}</span>
+          <span className="badge badge-muted">{investigations.length}</span>
         )}
       </div>
-      <p className="text-xs text-text-muted mb-4">Открываются по подозрительным точкам</p>
+      <p className="text-xs text-muted mb-4">Открываются по подозрительным точкам</p>
 
       {investigations.length === 0 ? (
         <div className="flex flex-col items-center text-center py-6 px-2">
           <div className="w-11 h-11 rounded-full bg-offwhite flex items-center justify-center mb-2.5">
-            <Plus className="w-5 h-5 text-text-faint" />
+            <Plus className="w-5 h-5 text-muted" />
           </div>
-          <p className="text-sm font-medium text-text-primary">Пока нет расследований</p>
-          <p className="text-xs text-text-muted mt-1 leading-relaxed">
+          <p className="text-sm font-medium text-charcoal">Пока нет расследований</p>
+          <p className="text-xs text-muted mt-1 leading-relaxed">
             Откройте расследование по красной точке — кнопка появляется в карточке точки и в её деталях.
           </p>
         </div>
