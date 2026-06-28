@@ -19,3 +19,7 @@ npm-debug.log*
 Thumbs.db
 .idea/
 .vscode/
+
+# Demo recording artifacts (kept local)
+demo.webm
+demo_frames/
