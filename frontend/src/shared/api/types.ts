@@ -141,25 +141,13 @@ export interface AnalyticsSummaryDto {
   approved_cost_value: number;
 }
 
-export interface IikoWebStatusDto {
+export interface IikoStatusDto {
   provider: string;
-  configured: boolean;
-  base_url: string | null;
-  supported_endpoints: string[];
-  write_off_act_endpoint_available: boolean;
-}
-
-export interface IikoServerStatusDto {
-  provider: string;
+  purpose: string;
   configured: boolean;
   base_url: string | null;
   write_off_act_endpoint: string;
   write_off_act_endpoint_available: boolean;
-}
-
-export interface IikoStatusDto {
-  iiko_web: IikoWebStatusDto;
-  iiko_server: IikoServerStatusDto;
   note: string;
 }
 
