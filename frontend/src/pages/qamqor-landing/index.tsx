@@ -1,5 +1,14 @@
+import { useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Smartphone, ClipboardCheck, BarChart3, ChevronRight, TrendingDown } from 'lucide-react';
+import { useAuth } from 'shared/auth/session';
+import { ApiError } from 'shared/api/client';
+import type { Role } from 'shared/api/types';
+const ROLE_ROUTES: Record<Role, string> = {
+  sender: '/employee',
+  reviewer: '/manager',
+  owner: '/dashboard',
+};
 
 const roles = [
   {
@@ -33,7 +42,25 @@ const roles = [
 
 export default function QamqorLanding() {
   const navigate = useNavigate();
-
+  const { login } = useAuth();
+  const pinRef = useRef<HTMLInputElement>(null);
+  const [pin, setPin] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  async function handleLogin(e: FormEvent) {
+    e.preventDefault();
+    if (!pin || submitting) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      const user = await login(pin);
+      navigate(ROLE_ROUTES[user.role] ?? '/');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.code : 'network_error');
+    } finally {
+      setSubmitting(false);
+    }
+  }
   return (
     <div className="min-h-screen bg-ink flex flex-col items-center justify-center px-4 py-12">
       <div
@@ -76,16 +103,48 @@ export default function QamqorLanding() {
           ))}
         </div>
 
+        <form onSubmit={handleLogin} className="w-full mb-6">
+          <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider text-center mb-2">
+            Введите PIN для входа
+          </label>
+          <div className="flex gap-2">
+            <input
+              ref={pinRef}
+              type="password"
+              inputMode="numeric"
+              autoComplete="off"
+              value={pin}
+              onChange={e => { setPin(e.target.value); setError(''); }}
+              placeholder="PIN"
+              className="flex-1 rounded-2xl px-5 py-4 text-white text-lg tracking-widest text-center outline-none"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+            />
+            <button
+              type="submit"
+              disabled={!pin || submitting}
+              className="px-6 rounded-2xl font-bold text-ink transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: '#F5A300' }}
+            >
+              {submitting ? '…' : 'Войти'}
+            </button>
+          </div>
+          {error && (
+            <p className="mt-2 text-center text-sm font-medium" style={{ color: '#FF6B6B' }}>
+              {error === 'invalid_pin' ? 'Неверный PIN' : `Ошибка: ${error}`}
+            </p>
+          )}
+        </form>
         <div className="w-full flex flex-col gap-4">
           <p className="text-xs font-semibold text-text-muted uppercase tracking-wider text-center mb-1">
-            Выберите роль для демо
+            Роли в системе
           </p>
           {roles.map(role => {
             const Icon = role.icon;
             return (
               <button
                 key={role.path}
-                onClick={() => navigate(role.path)}
+                type="button"
+                onClick={() => pinRef.current?.focus()}
                 className="w-full flex items-center gap-5 p-5 rounded-2xl text-left transition-all duration-150 hover:scale-[1.01] active:scale-[0.99]"
                 style={{
                   background: 'rgba(255,255,255,0.05)',
@@ -120,7 +179,7 @@ export default function QamqorLanding() {
 
         <div className="mt-10 flex items-center gap-2 text-text-muted text-xs">
           <TrendingDown className="w-3.5 h-3.5" />
-          <span>Демо-режим · данные засеяны · бэкенд не нужен</span>
+          <span>Данные засеяны · вход по PIN через бэкенд</span>
         </div>
       </div>
     </div>

@@ -7,9 +7,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../store/write_off_store.dart';
+import '../store/auth_store.dart';
+import '../api/api_client.dart';
+import '../api/api_config.dart';
+import '../api/dto.dart';
 import '../theme.dart';
 
-const _apiBase = 'http://localhost:4000';
+const _analyzePath = '/photo-analysis/analyze';
 
 const _reasonLabels = {
   'DAMAGED': 'Повреждён',
@@ -47,11 +51,22 @@ class _CameraScreenState extends State<CameraScreen> {
   bool _launched = false;
   Map<String, dynamic>? _result;
   Uint8List? _photoBytes;
+  List<ProductDto> _productList = [];
 
   @override
   void initState() {
     super.initState();
+    _loadProducts();
     WidgetsBinding.instance.addPostFrameCallback((_) => _shoot());
+  }
+
+  Future<void> _loadProducts() async {
+    try {
+      final list = await context.read<ApiClient>().listProducts();
+      if (mounted) setState(() => _productList = list);
+    } catch (_) {
+      // Offline — fall back to the static product list.
+    }
   }
 
   Future<void> _shoot() async {
@@ -79,7 +94,7 @@ class _CameraScreenState extends State<CameraScreen> {
     try {
       final response = await http
           .post(
-            Uri.parse('$_apiBase/photo-analysis/analyze'),
+            Uri.parse('$apiBaseUrl$_analyzePath'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
               'image_base64': base64Encode(bytes),
@@ -106,15 +121,19 @@ class _CameraScreenState extends State<CameraScreen> {
     });
   }
 
+  List<String> get _productNames =>
+      _productList.isEmpty ? _products : _productList.map((p) => p.name).toList();
+
   String _resolveProduct(String? detected) {
-    if (detected == null) return _products.first;
+    final names = _productNames;
+    if (detected == null) return names.first;
     final lower = detected.toLowerCase();
-    for (final p in _products) {
+    for (final p in names) {
       if (p.toLowerCase().contains(lower) || lower.contains(p.toLowerCase())) {
         return p;
       }
     }
-    return _products.first;
+    return names.first;
   }
 
   String _resolveReason(String? suggested) {
@@ -178,6 +197,7 @@ class _CameraScreenState extends State<CameraScreen> {
       return _ConfirmScreen(
         result: _result!,
         photoBytes: _photoBytes,
+        products: _productList,
         product: _resolveProduct(_result!['detected_product'] as String?),
         reason: _resolveReason(_result!['suggested_reason'] as String?),
         onRetake: () {
@@ -200,6 +220,7 @@ class _ConfirmScreen extends StatefulWidget {
   const _ConfirmScreen({
     required this.result,
     required this.photoBytes,
+    required this.products,
     required this.product,
     required this.reason,
     required this.onRetake,
@@ -207,6 +228,7 @@ class _ConfirmScreen extends StatefulWidget {
 
   final Map<String, dynamic> result;
   final Uint8List? photoBytes;
+  final List<ProductDto> products;
   final String product;
   final String reason;
   final VoidCallback onRetake;
@@ -239,6 +261,17 @@ class _ConfirmScreenState extends State<_ConfirmScreen> {
     super.dispose();
   }
 
+  List<String> get _productNames => widget.products.isEmpty
+      ? _products
+      : widget.products.map((p) => p.name).toList();
+
+  String _productId(String name) {
+    for (final p in widget.products) {
+      if (p.name == name) return p.id;
+    }
+    return '';
+  }
+
   void _editProduct() async {
     final picked = await showModalBottomSheet<String>(
       context: context,
@@ -257,7 +290,7 @@ class _ConfirmScreenState extends State<_ConfirmScreen> {
                     fontSize: 16,
                     color: BahandiColors.charcoal)),
             const SizedBox(height: 12),
-            ..._products.map((p) => ListTile(
+            ..._productNames.map((p) => ListTile(
                   dense: true,
                   title: Text(p, style: GoogleFonts.golosText(fontSize: 14)),
                   trailing: p == _product
@@ -398,17 +431,28 @@ class _ConfirmScreenState extends State<_ConfirmScreen> {
     final overrideNote = _overrodeAi && _overrideReasonController.text.isNotEmpty
         ? ' — ${_overrideReasonController.text}'
         : '';
-    final entry = WriteOffEntry(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      product: _product,
+    final comment =
+        '$withholdingNote${_condition.isNotEmpty ? ' $_condition' : ''}$overrideNote';
+    final user = context.read<AuthStore>().user;
+    final store = context.read<WriteOffStore>();
+    final entry = await store.submit(
+      outletId: user?.outlet.id ?? '',
+      employeeId: user?.id ?? '',
+      productId: _productId(_product),
+      productName: _product,
       quantity: _quantity,
-      unit: 'шт',
-      reason: _reason,
-      comment: '$withholdingNote${_condition.isNotEmpty ? ' $_condition' : ''}$overrideNote',
-      submittedAt: DateTime.now(),
-      status: 'pending',
+      displayUnit: 'шт',
+      reasonCode: _reason,
+      deductionType: _withholding ? 'WITH_DEDUCTION' : 'NO_DEDUCTION',
+      chargedEmployeeId: _withholding ? user?.id : null,
+      comment: comment,
+      photoBytes: widget.photoBytes,
+      aiSuggestedType: !_overrodeAi,
+      overrideExplanation:
+          _overrodeAi && _overrideReasonController.text.isNotEmpty
+              ? _overrideReasonController.text.trim()
+              : null,
     );
-    await context.read<WriteOffStore>().add(entry);
     if (!mounted) return;
     context.go('/success', extra: entry);
   }

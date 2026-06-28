@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../store/write_off_store.dart';
+import '../store/auth_store.dart';
 import '../theme.dart';
 
 const _reasonLabels = {
@@ -13,8 +14,24 @@ const _reasonLabels = {
   'OTHER': 'Другое',
 };
 
-class HistoryScreen extends StatelessWidget {
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
+
+  @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final id = context.read<AuthStore>().user?.id;
+      if (id != null) {
+        context.read<WriteOffStore>().loadHistory(employeeId: id);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
