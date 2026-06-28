@@ -1,5 +1,10 @@
 import { buildApiUrl } from './http-client';
 import type {
+  AnalyticsEmployeeDto,
+  AnalyticsHourlyDto,
+  AnalyticsInvestigationDto,
+  AnalyticsOutletDto,
+  AnalyticsProductDto,
   AnalyticsSummaryDto,
   CreateEmployeeBody,
   CreateNormBody,
@@ -16,6 +21,8 @@ import type {
   OutletDto,
   PhotoDto,
   ProductDto,
+  ReconciliationParams,
+  ReconciliationRowDto,
   ReviewWriteOffBody,
   UpdateEmployeeBody,
   WriteOffDto,
@@ -174,6 +181,11 @@ export const apiClient = {
     );
   },
 
+  /** Full write-off list (no filter) for client-side aggregation. */
+  listAllWriteOffs(): Promise<WriteOffDto[]> {
+    return request<WriteOffDto[]>('/write-offs');
+  },
+
   getWriteOff(id: string): Promise<WriteOffDto> {
     return request<WriteOffDto>(`/write-offs/${encodeURIComponent(id)}`);
   },
@@ -187,6 +199,32 @@ export const apiClient = {
 
   analyticsSummary(): Promise<AnalyticsSummaryDto> {
     return request<AnalyticsSummaryDto>('/analytics/summary');
+  },
+
+  analyticsOutlets(): Promise<AnalyticsOutletDto[]> {
+    return request<AnalyticsOutletDto[]>('/analytics/outlets');
+  },
+
+  analyticsEmployees(): Promise<AnalyticsEmployeeDto[]> {
+    return request<AnalyticsEmployeeDto[]>('/analytics/employees');
+  },
+
+  analyticsProducts(): Promise<AnalyticsProductDto[]> {
+    return request<AnalyticsProductDto[]>('/analytics/products');
+  },
+
+  analyticsHourly(): Promise<AnalyticsHourlyDto[]> {
+    return request<AnalyticsHourlyDto[]>('/analytics/hourly');
+  },
+
+  analyticsInvestigations(): Promise<AnalyticsInvestigationDto[]> {
+    return request<AnalyticsInvestigationDto[]>('/analytics/investigations');
+  },
+
+  inventoryReconciliation(params: ReconciliationParams = {}): Promise<ReconciliationRowDto[]> {
+    return request<ReconciliationRowDto[]>(
+      `/inventory/reconciliation${buildQuery({ outlet_id: params.outlet_id })}`,
+    );
   },
 
   iikoStatus(): Promise<IikoStatusDto> {

@@ -2,7 +2,8 @@ import { useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Smartphone, ClipboardCheck, BarChart3, ChevronRight, TrendingDown } from 'lucide-react';
 import { useAuth } from 'shared/auth/session';
-import { useLogin } from 'shared/api/queries';
+import { useAnalyticsOutlets, useAnalyticsSummary, useLogin } from 'shared/api/queries';
+import { fmtMoney } from 'shared/qamqor-data/format';
 import { ApiError } from 'shared/api/client';
 import type { Role } from 'shared/api/types';
 const ROLE_ROUTES: Record<Role, string> = {
@@ -45,6 +46,8 @@ export default function QamqorLanding() {
   const navigate = useNavigate();
   const { applySession } = useAuth();
   const loginMutation = useLogin();
+  const summaryQuery = useAnalyticsSummary();
+  const outletsQuery = useAnalyticsOutlets();
   const pinRef = useRef<HTMLInputElement>(null);
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
@@ -82,7 +85,9 @@ export default function QamqorLanding() {
           </div>
           <div>
             <h1 className="text-4xl font-black text-white tracking-tight">Qamqor</h1>
-            <p className="text-text-muted text-sm font-medium tracking-widest uppercase mt-0.5">Bahandi · 5 точек</p>
+            <p className="text-text-muted text-sm font-medium tracking-widest uppercase mt-0.5">
+              Bahandi{outletsQuery.data ? ` · ${outletsQuery.data.length} точек` : ''}
+            </p>
           </div>
         </div>
 
@@ -95,18 +100,31 @@ export default function QamqorLanding() {
           </p>
         </div>
 
-        <div className="flex gap-6 mt-6 mb-10">
-          {[
-            { label: 'Точек под контролем', value: '5' },
-            { label: 'Недостача · июнь', value: '₸812K' },
-            { label: 'Точек в красной зоне', value: '1' },
-          ].map(s => (
-            <div key={s.label} className="text-center">
-              <div className="text-2xl font-black text-amber-DEFAULT">{s.value}</div>
-              <div className="text-xs text-text-muted mt-0.5">{s.label}</div>
+        {(() => {
+          const loading = summaryQuery.isLoading || outletsQuery.isLoading;
+          const outlets = outletsQuery.data ?? [];
+          const stats = [
+            { label: 'Точек под контролем', value: loading ? '…' : String(outlets.length) },
+            {
+              label: 'Списано · одобрено',
+              value: loading ? '…' : fmtMoney(summaryQuery.data?.approved_cost_value ?? 0),
+            },
+            {
+              label: 'Точек в красной зоне',
+              value: loading ? '…' : String(outlets.filter(o => o.zone === 'red').length),
+            },
+          ];
+          return (
+            <div className="flex gap-6 mt-6 mb-10">
+              {stats.map(s => (
+                <div key={s.label} className="text-center">
+                  <div className="text-2xl font-black text-amber-DEFAULT">{s.value}</div>
+                  <div className="text-xs text-text-muted mt-0.5">{s.label}</div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          );
+        })()}
 
         <form onSubmit={handleLogin} className="w-full mb-6">
           <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider text-center mb-2">

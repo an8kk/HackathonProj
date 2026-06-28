@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import httpx
 
+from bahandi_backend.integrations.iiko.factory import build_write_off_sink
 from bahandi_backend.integrations.iiko.server_sink import (
     IikoServerWriteOffSink,
     NotConfiguredWriteOffSink,
+    SimulatedWriteOffSink,
     build_write_off_xml,
 )
 from bahandi_backend.integrations.iiko.types import WriteOffActCommand
@@ -91,3 +93,23 @@ async def test_server_sink_reports_failure_on_http_error() -> None:
 
     assert result.status == 'failed'
     assert result.error
+
+async def test_simulated_sink_reports_synced_act() -> None:
+    sink = SimulatedWriteOffSink()
+    assert sink.configured is True
+    result = await sink.create_write_off_act(_command())
+    assert result.status == 'synced'
+    assert result.external_id and result.external_id.startswith('AKT-')
+    assert '<storeId>store-guid</storeId>' in (result.request_xml or '')
+
+
+def test_factory_selects_sink_by_settings() -> None:
+    assert isinstance(build_write_off_sink(Settings()), NotConfiguredWriteOffSink)
+    assert isinstance(build_write_off_sink(Settings(iiko_simulate=True)), SimulatedWriteOffSink)
+    live = Settings(
+        iiko_server_base_url='https://resto.test',
+        iiko_server_login='a',
+        iiko_server_password_sha1='b',
+        iiko_server_store_id='s',
+    )
+    assert isinstance(build_write_off_sink(live), IikoServerWriteOffSink)

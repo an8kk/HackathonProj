@@ -240,6 +240,11 @@ async def analytics_employees(db_session: AsyncSession) -> dict[str, Any]:
     return ok(await analytics_service.employee_analytics(db_session))
 
 
+@get('/analytics/outlets')
+async def analytics_outlets(db_session: AsyncSession) -> dict[str, Any]:
+    return ok(await analytics_service.outlet_analytics(db_session))
+
+
 @get('/analytics/products')
 async def analytics_products(db_session: AsyncSession) -> dict[str, Any]:
     return ok(await analytics_service.product_analytics(db_session))
@@ -345,6 +350,7 @@ PROTECTED_HANDLERS = [
     inventory_reconciliation,
     analytics_summary,
     analytics_employees,
+    analytics_outlets,
     analytics_products,
     analytics_hourly,
     analytics_investigations,

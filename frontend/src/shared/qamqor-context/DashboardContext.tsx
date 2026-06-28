@@ -3,7 +3,7 @@ import React, {
 } from 'react';
 import type { Period, LocationStatus } from 'shared/qamqor-data/types';
 import type { DashboardDataSource } from 'shared/qamqor-data/datasource';
-import { createDataSource } from 'shared/qamqor-data/mockDataSource';
+import { createDataSource } from 'shared/qamqor-data/httpDataSource';
 import { useApp } from './AppContext';
 
 export type LocationSort = 'variance' | 'deficit' | 'name';

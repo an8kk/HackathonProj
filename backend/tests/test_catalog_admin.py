@@ -4,9 +4,9 @@ from litestar.testing import TestClient
 
 
 def test_seeded_reference_data_is_available(client: TestClient) -> None:
-    assert len(client.get('/outlets').json()['data']) == 2
-    assert len(client.get('/products').json()['data']) == 4
-    assert len(client.get('/employees').json()['data']) == 4
+    assert len(client.get('/outlets').json()['data']) == 5
+    assert len(client.get('/products').json()['data']) == 8
+    assert len(client.get('/employees').json()['data']) >= 10
 
 
 def test_employees_can_be_filtered_by_outlet(client: TestClient) -> None:
@@ -33,7 +33,7 @@ def test_admin_can_create_product_with_norm(client: TestClient) -> None:
 
 
 def test_admin_can_create_outlet_and_employee(client: TestClient) -> None:
-    outlet = client.post('/admin/outlets', json={'name': 'Khan Shatyr', 'address': 'Астана'})
+    outlet = client.post('/admin/outlets', json={'name': 'Esentai Mall', 'address': 'Алматы'})
     assert outlet.status_code == 201
     outlet_id = outlet.json()['data']['id']
 

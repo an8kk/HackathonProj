@@ -12,16 +12,19 @@ def integration_status(settings: Settings) -> dict[str, Any]:
     Approved write-offs are pushed to iiko as a warehouse write-off act
     (акт списания) via the iiko Server API, which deducts iiko inventory.
     """
+    simulated = settings.iiko_simulate and not settings.iiko_server_configured
+    mode = 'live' if settings.iiko_server_configured else 'simulated' if simulated else 'disabled'
     return {
         'provider': 'iiko Server API',
         'purpose': 'create write-off act, transfer data to iiko, auto-deduct inventory',
-        'configured': settings.iiko_server_configured,
+        'mode': mode,
+        'configured': settings.iiko_server_configured or simulated,
+        'simulated': simulated,
         'base_url': settings.iiko_server_base_url,
         'write_off_act_endpoint': IIKO_SERVER_WRITE_OFF_ENDPOINT,
-        'write_off_act_endpoint_available': settings.iiko_server_configured,
+        'write_off_act_endpoint_available': settings.iiko_server_configured or simulated,
         'note': (
-            'Configure IIKO_SERVER_* (base URL, login, SHA1 password, store id, account id) '
-            'to enable real write-off sync. Until then approved write-offs still post a local '
-            'inventory movement and record an iiko sync status of not_configured.'
+            'Live mode posts the writeoffDocument to a real iiko Server. Simulated mode '
+            '(IIKO_SIMULATE) returns a successful act for demos without a live iiko.'
         ),
     }

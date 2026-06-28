@@ -55,12 +55,16 @@ services:
     environment:
       BACKEND_PORT: ${BACKEND_PORT:-4000}
       DATABASE_URL: ${DATABASE_URL:-postgres://hackathon:hackathon@postgres:5432/hackathon}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
       S3_BUCKET: ${S3_BUCKET:-bahandi-photos}
       S3_REGION: ${S3_REGION:-us-east-1}
       S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
       S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
       S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      IIKO_SIMULATE: ${IIKO_SIMULATE:-true}
       IIKO_SERVER_BASE_URL: ${IIKO_SERVER_BASE_URL:-}
       IIKO_SERVER_LOGIN: ${IIKO_SERVER_LOGIN:-}
       IIKO_SERVER_PASSWORD_SHA1: ${IIKO_SERVER_PASSWORD_SHA1:-}

@@ -199,3 +199,75 @@ export interface UpdateEmployeeBody {
   pin?: string;
   active?: boolean;
 }
+
+/* ─────────────────────────── Analytics rollups ─────────────────────────── */
+
+export type OutletZone = 'green' | 'amber' | 'red';
+export type InvestigationSeverity = 'high' | 'medium';
+
+/** `GET /analytics/outlets` — per-outlet rollup. */
+export interface AnalyticsOutletDto {
+  outlet_id: string;
+  outlet_name: string;
+  address: string | null;
+  total_requests: number;
+  approved: number;
+  pending: number;
+  rejected: number;
+  write_off_cost: number;
+  unexplained_variance: number;
+  zone: OutletZone;
+}
+
+/** `GET /analytics/employees` — leaderboard. */
+export interface AnalyticsEmployeeDto {
+  employee_id: string;
+  employee_name: string;
+  outlet_name: string | null;
+  total_requests: number;
+  approved: number;
+  rejected: number;
+  with_deduction: number;
+  times_charged: number;
+}
+
+/** `GET /analytics/products`. */
+export interface AnalyticsProductDto {
+  product_id: string;
+  product_name: string | null;
+  write_off_count: number;
+  quantity: number;
+  cost_value: number;
+}
+
+/** `GET /analytics/hourly` — 24 rows. */
+export interface AnalyticsHourlyDto {
+  hour: number;
+  count: number;
+}
+
+/** `GET /analytics/investigations` — suspicious clusters. */
+export interface AnalyticsInvestigationDto {
+  employee_id: string;
+  employee_name: string | null;
+  product_id: string;
+  product_name: string | null;
+  reason_code: ReasonCode;
+  occurrences: number;
+  severity: InvestigationSeverity;
+}
+
+/** `GET /inventory/reconciliation` — per outlet+product stock truth. */
+export interface ReconciliationRowDto {
+  outlet_id: string;
+  product_id: string;
+  product_name: string | null;
+  theoretical_balance: number;
+  actual_balance: number;
+  write_off_total: number;
+  unexplained_variance: number;
+}
+
+export interface ReconciliationParams {
+  outlet_id?: string;
+}

@@ -8,7 +8,7 @@ from litestar.router import Router
 from .api import DEPENDENCIES, PROTECTED_HANDLERS, PUBLIC_HANDLERS
 from .auth.guards import require_auth
 from .db.migrations import run_migrations
-from .db.seed import seed_demo_data
+from .db.seed import seed_demo_history, seed_reference_data
 from .db.session import create_engine
 from .services.errors import ServiceError
 from .settings import Settings
@@ -22,7 +22,9 @@ async def _on_startup(app: Litestar) -> None:
     await asyncio.to_thread(run_migrations, settings.database_url)
     factory = app.state.session_factory
     async with factory() as session:
-        await seed_demo_data(session)
+        await seed_reference_data(session)
+        if settings.seed_demo_data:
+            await seed_demo_history(session)
         await session.commit()
 
 

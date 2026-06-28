@@ -8,9 +8,10 @@ import {
 import { useApp } from 'shared/qamqor-context/AppContext';
 import { useAuth } from 'shared/auth/session';
 import { ApiError } from 'shared/api/client';
-import { useCreateWriteOff, useProducts, useUploadPhoto } from 'shared/api/queries';
+import { useCreateWriteOff, useEmployeeWriteOffs, useProducts, useUploadPhoto } from 'shared/api/queries';
 import { WRITE_OFF_REASONS, STAGES } from 'shared/qamqor-data/seed';
 import type { Product, WriteOffRequest } from 'shared/qamqor-data/types';
+import { buildRefMaps, toWriteOffRequest } from 'shared/qamqor-data/backendMap';
 import type { ReasonCode } from 'shared/api/types';
 // UI reason codes (seed) → backend ReasonCode enum.
 const REASON_CODE_MAP: Record<string, ReasonCode> = {
@@ -75,7 +76,7 @@ function formatDate(ts: string) {
 
 export default function QamqorEmployee() {
   const navigate = useNavigate();
-  const { requests, addRequest } = useApp();
+  const { addRequest } = useApp();
   const { user } = useAuth();
   const uid = useId();
 
@@ -108,7 +109,21 @@ export default function QamqorEmployee() {
   const submitting = uploadPhoto.isPending || createWriteOff.isPending;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const myRequests = requests.filter(r => r.locationId === DEMO_EMPLOYEE.locationId);
+  // История заявок и статистика — из реального бэкенда (GET /write-offs?employee_id=).
+  const myWriteOffsQuery = useEmployeeWriteOffs(user?.id);
+  const myRequestsRefs = useMemo(
+    () =>
+      buildRefMaps(
+        user?.outlet ? [user.outlet] : [],
+        user ? [{ id: user.id, name: user.name, role: user.role, active: user.active, outlet: user.outlet, outlet_id: user.outlet_id }] : [],
+        productsQuery.data ?? [],
+      ),
+    [user, productsQuery.data],
+  );
+  const myRequests = useMemo<WriteOffRequest[]>(
+    () => (myWriteOffsQuery.data ?? []).map(dto => toWriteOffRequest(dto, myRequestsRefs)),
+    [myWriteOffsQuery.data, myRequestsRefs],
+  );
 
   const product = products.find(p => p.id === productId);
 

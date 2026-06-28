@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-query';
 import { apiClient } from './client';
 import type {
+  AnalyticsOutletDto,
   AnalyticsSummaryDto,
   CreateEmployeeBody,
   CreateNormBody,
@@ -36,9 +37,12 @@ export const queryKeys = {
   norms: (params: ListNormsParams) =>
     ['norms', params.outlet_id ?? null, params.product_id ?? null] as const,
   pendingWriteOffs: ['write-offs', 'pending'] as const,
+  allWriteOffs: ['write-offs', 'all'] as const,
+  writeOffsByEmployee: (employeeId: string) => ['write-offs', 'employee', employeeId] as const,
   writeOff: (id: string) => ['write-offs', id] as const,
   photo: (id: string) => ['photo', id] as const,
   analyticsSummary: ['analytics', 'summary'] as const,
+  analyticsOutlets: ['analytics', 'outlets'] as const,
   iikoStatus: ['integrations', 'iiko'] as const,
 };
 
@@ -73,6 +77,23 @@ export function usePendingWriteOffs(): UseQueryResult<WriteOffDto[]> {
   });
 }
 
+export function useAllWriteOffs(): UseQueryResult<WriteOffDto[]> {
+  return useQuery({
+    queryKey: queryKeys.allWriteOffs,
+    queryFn: () => apiClient.listAllWriteOffs(),
+  });
+}
+
+export function useEmployeeWriteOffs(
+  employeeId: string | null | undefined,
+): UseQueryResult<WriteOffDto[]> {
+  return useQuery({
+    queryKey: queryKeys.writeOffsByEmployee(employeeId ?? ''),
+    queryFn: () => apiClient.listWriteOffs({ employee_id: employeeId as string }),
+    enabled: Boolean(employeeId),
+  });
+}
+
 export function useWriteOff(id: string | null | undefined): UseQueryResult<WriteOffDto> {
   return useQuery({
     queryKey: queryKeys.writeOff(id ?? ''),
@@ -93,6 +114,13 @@ export function useAnalyticsSummary(): UseQueryResult<AnalyticsSummaryDto> {
   return useQuery({
     queryKey: queryKeys.analyticsSummary,
     queryFn: () => apiClient.analyticsSummary(),
+  });
+}
+
+export function useAnalyticsOutlets(): UseQueryResult<AnalyticsOutletDto[]> {
+  return useQuery({
+    queryKey: queryKeys.analyticsOutlets,
+    queryFn: () => apiClient.analyticsOutlets(),
   });
 }
 

@@ -95,6 +95,49 @@ async def summary(session: AsyncSession) -> dict:
     }
 
 
+async def outlet_analytics(session: AsyncSession) -> list[dict]:
+    """Per-outlet rollup for the network/locations views (all from real data)."""
+    requests, _employees, products, outlets = await _load(session)
+    movements = list((await session.execute(select(models.InventoryMovement))).scalars().all())
+
+    by_outlet: dict[str, list[models.WriteOffRequest]] = defaultdict(list)
+    for request in requests:
+        by_outlet[request.outlet_id].append(request)
+
+    variance_by_outlet: dict[str, float] = defaultdict(float)
+    for movement in movements:
+        if movement.movement_type == 'COUNT_ADJUSTMENT':
+            variance_by_outlet[movement.outlet_id] += abs(movement.quantity)
+
+    rows: list[dict] = []
+    for outlet_id, outlet in outlets.items():
+        items = by_outlet.get(outlet_id, [])
+        approved = [r for r in items if r.status == WriteOffStatus.APPROVED]
+        cost = 0.0
+        for r in approved:
+            product = products.get(r.product_id)
+            if product:
+                cost += r.quantity * product.cost_per_unit
+        variance = round(variance_by_outlet.get(outlet_id, 0.0), 1)
+        zone = 'red' if variance > 120 or cost > 600_000 else 'amber' if variance > 50 else 'green'
+        rows.append(
+            {
+                'outlet_id': outlet_id,
+                'outlet_name': outlet.name,
+                'address': outlet.address,
+                'total_requests': len(items),
+                'approved': len(approved),
+                'pending': sum(1 for r in items if r.status == WriteOffStatus.PENDING),
+                'rejected': sum(1 for r in items if r.status == WriteOffStatus.REJECTED),
+                'write_off_cost': round(cost, 2),
+                'unexplained_variance': variance,
+                'zone': zone,
+            }
+        )
+    rows.sort(key=lambda row: row['write_off_cost'], reverse=True)
+    return rows
+
+
 async def investigations(session: AsyncSession) -> list[dict]:
     """Flag suspicious clusters: repeated employee+product+reason combinations."""
     requests, employees, products, _ = await _load(session)

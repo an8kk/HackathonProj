@@ -9,7 +9,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import models
-from ..photos.ai import AnthropicPhotoAnalyzer, PhotoAnalyzer, RuleBasedPhotoAnalyzer
+from ..photos.ai import (
+    AnthropicPhotoAnalyzer,
+    OpenAiPhotoAnalyzer,
+    PhotoAnalyzer,
+    RuleBasedPhotoAnalyzer,
+)
 from ..photos.metadata import validate_metadata
 from ..photos.storage import PhotoStorage, build_storage
 from ..schemas import PhotoUploadRequest
@@ -19,6 +24,8 @@ __all__ = ['build_analyzer', 'build_storage', 'save_photo']
 
 
 def build_analyzer(settings: Settings) -> PhotoAnalyzer:
+    if settings.openai_api_key:
+        return OpenAiPhotoAnalyzer(api_key=settings.openai_api_key, model=settings.openai_model)
     if settings.anthropic_api_key:
         return AnthropicPhotoAnalyzer(
             api_key=settings.anthropic_api_key, model=settings.anthropic_model
