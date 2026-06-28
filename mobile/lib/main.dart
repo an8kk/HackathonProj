@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'api/api_client.dart';
 import 'store/write_off_store.dart';
 import 'store/auth_store.dart';
 import 'theme.dart';
@@ -7,12 +8,14 @@ import 'router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final store = WriteOffStore();
-  final auth = AuthStore();
+  final api = ApiClient();
+  final store = WriteOffStore(api);
+  final auth = AuthStore(api);
   await Future.wait([store.load(), auth.load()]);
   runApp(
     MultiProvider(
       providers: [
+        Provider<ApiClient>.value(value: api),
         ChangeNotifierProvider.value(value: store),
         ChangeNotifierProvider.value(value: auth),
       ],

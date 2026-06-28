@@ -13,37 +13,36 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _idController = TextEditingController();
   final _pinController = TextEditingController();
   bool _loading = false;
   String? _error;
 
   Future<void> _login() async {
-    final id = _idController.text.trim();
     final pin = _pinController.text.trim();
-    if (id.isEmpty || pin.isEmpty) return;
+    if (pin.isEmpty) return;
     setState(() {
       _loading = true;
       _error = null;
     });
-    final user = await context.read<AuthStore>().login(id, pin);
+    final store = context.read<AuthStore>();
+    final user = await store.login(pin);
     if (!mounted) return;
     if (user != null) {
       context.go('/dashboard');
     } else {
       setState(() {
         _loading = false;
-        _error = 'Неверный ID сотрудника или PIN-код';
+        _error = store.error == 'invalid_pin' || store.error == 'unauthorized'
+            ? 'Неверный PIN-код'
+            : 'Не удалось войти. Проверьте подключение.';
       });
     }
   }
 
-  bool get _canLogin =>
-      _idController.text.trim().isNotEmpty && _pinController.text.trim().isNotEmpty;
+  bool get _canLogin => _pinController.text.trim().isNotEmpty;
 
   @override
   void dispose() {
-    _idController.dispose();
     _pinController.dispose();
     super.dispose();
   }
@@ -75,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Введите ID сотрудника и PIN-код',
+                  'Введите PIN-код',
                   style: GoogleFonts.golosText(
                     fontSize: 15,
                     color: BahandiColors.muted,
@@ -92,19 +91,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    TextField(
-                      controller: _idController,
-                      keyboardType: TextInputType.number,
-                      maxLength: 10,
-                      textInputAction: TextInputAction.next,
-                      onChanged: (_) => setState(() {}),
-                      decoration: const InputDecoration(
-                        labelText: 'ID сотрудника',
-                        counterText: '',
-                        prefixIcon: Icon(Icons.badge_outlined, color: BahandiColors.muted),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
                     TextField(
                       controller: _pinController,
                       keyboardType: TextInputType.number,
@@ -129,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'Демо: ID 1001 / PIN 1234  ·  ID 1002 / PIN 2222',
+                        'Демо PIN: 1111 · 2222 · 9999 · 3333',
                         style: GoogleFonts.golosText(
                           fontSize: 12,
                           color: BahandiColors.muted,

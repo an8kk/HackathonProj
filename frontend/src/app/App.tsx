@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from 'shared/auth/session';
 import { AppProvider } from 'shared/qamqor-context/AppContext';
 import { DashboardProvider } from 'shared/qamqor-context/DashboardContext';
 import { InvestigationsProvider } from 'shared/qamqor-context/InvestigationsContext';
@@ -9,18 +10,20 @@ import QamqorDashboard from 'pages/qamqor-dashboard';
 
 export const App = () => (
   <BrowserRouter>
-    <AppProvider>
-      <InvestigationsProvider>
-        <DashboardProvider>
-          <Routes>
-            <Route path="/" element={<QamqorLanding />} />
-            <Route path="/employee" element={<QamqorEmployee />} />
-            <Route path="/manager" element={<QamqorManager />} />
-            <Route path="/dashboard" element={<QamqorDashboard />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </DashboardProvider>
-      </InvestigationsProvider>
-    </AppProvider>
+    <AuthProvider>
+      <AppProvider>
+        <InvestigationsProvider>
+          <DashboardProvider>
+            <Routes>
+              <Route path="/" element={<QamqorLanding />} />
+              <Route path="/employee" element={<QamqorEmployee />} />
+              <Route path="/manager" element={<QamqorManager />} />
+              <Route path="/dashboard" element={<QamqorDashboard />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </DashboardProvider>
+        </InvestigationsProvider>
+      </AppProvider>
+    </AuthProvider>
   </BrowserRouter>
 );

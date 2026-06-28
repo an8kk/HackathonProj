@@ -1,0 +1,36 @@
+[project]
+name = "bahandi-backend"
+version = "0.1.0"
+description = "Litestar backend for Bahandi/Qamqor write-off automation"
+requires-python = ">=3.12"
+dependencies = [
+  "litestar[standard]>=2.14,<3",
+  "httpx>=0.28,<1",
+  "pydantic-settings>=2.7,<3",
+  "pillow>=11,<12",
+  "python-multipart>=0.0.20,<1",
+  "sqlalchemy[asyncio]>=2.0,<3",
+  "aiosqlite>=0.20,<1",
+  "asyncpg>=0.30,<1",
+  "pyjwt>=2.10,<3",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.3,<9",
+  "pytest-asyncio>=0.25,<1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+filterwarnings = [
+  "ignore::DeprecationWarning",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.setuptools.packages.find]
+where = ["src"]

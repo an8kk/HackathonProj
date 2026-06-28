@@ -1,4 +1,4 @@
-import { useState, useId } from 'react';
+import { useState, useId, useEffect, useRef, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, ChevronLeft, ChevronRight, Camera, AlertTriangle,
@@ -6,8 +6,22 @@ import {
   MapPin, User, Info, ArrowLeft,
 } from 'lucide-react';
 import { useApp } from 'shared/qamqor-context/AppContext';
-import { PRODUCTS, WRITE_OFF_REASONS, STAGES } from 'shared/qamqor-data/seed';
-import type { WriteOffRequest } from 'shared/qamqor-data/types';
+import { useAuth } from 'shared/auth/session';
+import { apiClient, ApiError } from 'shared/api/client';
+import { WRITE_OFF_REASONS, STAGES } from 'shared/qamqor-data/seed';
+import type { Product, WriteOffRequest } from 'shared/qamqor-data/types';
+import type { ReasonCode } from 'shared/api/types';
+// UI reason codes (seed) → backend ReasonCode enum.
+const REASON_CODE_MAP: Record<string, ReasonCode> = {
+  expired: 'EXPIRED',
+  'equipment-failure': 'OTHER',
+  trimming: 'RAW_WASTE',
+  drying: 'RAW_WASTE',
+  dropped: 'DROPPED',
+  overcooked: 'OVERCOOKED',
+  'supplier-defect': 'DAMAGED',
+  'short-delivery': 'OTHER',
+};
 
 const DEMO_EMPLOYEE = { id: '1001', name: 'Айгерим Сейткали', location: 'Bahandi Mega Silk Way', locationId: 'mega' };
 
@@ -61,6 +75,7 @@ function formatDate(ts: string) {
 export default function QamqorEmployee() {
   const navigate = useNavigate();
   const { requests, addRequest } = useApp();
+  const { user } = useAuth();
   const uid = useId();
 
   const [tab, setTab] = useState<Tab>('home');
@@ -74,10 +89,33 @@ export default function QamqorEmployee() {
   const [stageCode, setStageCode] = useState('');
   const [photoId, setPhotoId] = useState('');
   const [comment, setComment] = useState('');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [photoFile, setPhotoFile] = useState<{ filename: string; contentType: string; base64: string } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    let active = true;
+    apiClient
+      .listProducts()
+      .then(list => {
+        if (!active) return;
+        setProducts(
+          list.map(p => ({
+            id: p.id,
+            name: p.name,
+            type: p.unit === 'штуки' ? 'unit' : 'weight',
+            unit: p.unit,
+            costPerUnit: p.cost_per_unit,
+          })),
+        );
+      })
+      .catch(() => { /* leave products empty; submit surfaces backend errors */ });
+    return () => { active = false; };
+  }, []);
 
   const myRequests = requests.filter(r => r.locationId === DEMO_EMPLOYEE.locationId);
 
-  const product = PRODUCTS.find(p => p.id === productId);
+  const product = products.find(p => p.id === productId);
 
   const TYPICAL_BATCH = 2000;
   const computedWastePercent = product?.type === 'weight' && quantity
@@ -105,9 +143,22 @@ export default function QamqorEmployee() {
     setReasonCode('');
     setStageCode('');
     setPhotoId('');
+    setPhotoFile(null);
     setComment('');
     setStep('product');
     setShowForm(false);
+  }
+  function handlePhotoSelected(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      const base64 = result.includes(',') ? result.slice(result.indexOf(',') + 1) : result;
+      setPhotoFile({ filename: file.name, contentType: file.type || 'image/jpeg', base64 });
+      setPhotoId(file.name);
+    };
+    reader.readAsDataURL(file);
   }
 
   function buildFlags(): string[] {
@@ -117,14 +168,48 @@ export default function QamqorEmployee() {
     return flags;
   }
 
-  function handleSubmit() {
-    if (!product || !selectedReason || !selectedStage) return;
+  async function handleSubmit() {
+    if (!product || !selectedReason || !selectedStage || submitting) return;
+    const employeeId = user?.id;
+    const outletId = user?.outlet?.id ?? user?.outlet_id ?? null;
+    if (!employeeId || !outletId) {
+      showToast('Сессия не найдена — войдите заново');
+      return;
+    }
+    setSubmitting(true);
+    let uploadedPhotoId: string | undefined;
+    try {
+      if (photoFile) {
+        const photo = await apiClient.uploadPhoto(outletId, {
+          filename: photoFile.filename,
+          content_base64: photoFile.base64,
+          content_type: photoFile.contentType,
+          taken_at: new Date().toISOString(),
+        });
+        uploadedPhotoId = photo.id;
+      }
+      await apiClient.createWriteOff({
+        outlet_id: outletId,
+        employee_id: employeeId,
+        product_id: product.id,
+        photo_id: uploadedPhotoId,
+        quantity: parseFloat(quantity),
+        unit: product.unit,
+        reason_code: REASON_CODE_MAP[selectedReason.code] ?? 'OTHER',
+        deduction_type: 'NO_DEDUCTION',
+        comment,
+      });
+    } catch (err) {
+      setSubmitting(false);
+      showToast(err instanceof ApiError ? `Ошибка: ${err.code}` : 'Ошибка сети');
+      return;
+    }
     const req: WriteOffRequest = {
       id: `req-user-${Date.now()}`,
-      employeeId: DEMO_EMPLOYEE.id,
-      employeeName: 'Айгерим С.',
+      employeeId,
+      employeeName: user?.name ?? DEMO_EMPLOYEE.name,
       locationId: DEMO_EMPLOYEE.locationId,
-      locationName: DEMO_EMPLOYEE.location,
+      locationName: user?.outlet?.name ?? DEMO_EMPLOYEE.location,
       productId: product.id,
       productName: product.name,
       productType: product.type,
@@ -135,7 +220,7 @@ export default function QamqorEmployee() {
       stageCode: selectedStage.code,
       stageLabel: selectedStage.label,
       comment,
-      photoId: photoId || 'photo-new-A',
+      photoId: uploadedPhotoId ?? photoId ?? '',
       shift: 'Вечерняя (18:00–23:00)',
       timestamp: new Date().toISOString(),
       status: 'pending',
@@ -144,6 +229,7 @@ export default function QamqorEmployee() {
       flags: buildFlags(),
     };
     addRequest(req);
+    setSubmitting(false);
     resetForm();
     setTab('requests');
     showToast('Заявка отправлена на проверку');
@@ -330,7 +416,7 @@ export default function QamqorEmployee() {
                       <p className="text-base font-bold text-text-primary mb-1">Выберите товар</p>
                       <p className="text-sm text-text-muted mb-4">Что списываем?</p>
                       <div className="flex flex-col gap-2">
-                        {PRODUCTS.map(p => (
+                        {products.map(p => (
                           <button
                             key={p.id}
                             onClick={() => setProductId(p.id)}
@@ -451,10 +537,19 @@ export default function QamqorEmployee() {
                     <div>
                       <p className="text-base font-bold text-text-primary mb-1">Фото</p>
                       <p className="text-sm text-text-muted mb-4">Сделайте снимок продукта</p>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={handlePhotoSelected}
+                      />
 
                       {!photoId ? (
                         <button
-                          onClick={() => setPhotoId('photo-new-A')}
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
                           className="w-full h-48 rounded-2xl border-2 border-dashed border-amber-DEFAULT bg-amber-light flex flex-col items-center justify-center gap-3 transition-all hover:bg-amber-light/80"
                         >
                           <Camera className="w-10 h-10 text-amber-dark" />
@@ -470,7 +565,7 @@ export default function QamqorEmployee() {
                             <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
                             <span>фото сделано в приложении · {new Date().toLocaleDateString('ru-RU', {day:'2-digit',month:'2-digit'})} · {DEMO_EMPLOYEE.location.replace('Bahandi ','')}</span>
                           </div>
-                          <button onClick={() => setPhotoId('')} className="mt-2 text-xs text-text-muted underline">
+                          <button onClick={() => { setPhotoId(''); setPhotoFile(null); }} className="mt-2 text-xs text-text-muted underline">
                             Переснять
                           </button>
                         </div>
@@ -536,8 +631,8 @@ export default function QamqorEmployee() {
 
                 <div className="px-4 pb-4 pt-3 bg-offwhite border-t border-stone-100 flex-shrink-0">
                   {step === 'review' ? (
-                    <button onClick={handleSubmit} className="w-full btn-primary py-4 text-base rounded-2xl">
-                      Отправить заявку
+                    <button onClick={handleSubmit} disabled={submitting} className="w-full btn-primary py-4 text-base rounded-2xl disabled:opacity-40 disabled:cursor-not-allowed">
+                      {submitting ? 'Отправка…' : 'Отправить заявку'}
                     </button>
                   ) : (
                     <button

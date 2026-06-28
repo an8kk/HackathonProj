@@ -1,12 +1,59 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CheckCircle2, XCircle, AlertTriangle, Clock, Camera,
   ChevronDown, ChevronUp, ArrowLeft, Shield,
   Copy, Package,
 } from 'lucide-react';
-import { useApp } from 'shared/qamqor-context/AppContext';
+import { useAuth } from 'shared/auth/session';
+import { apiClient, ApiError } from 'shared/api/client';
+import IntegrationStatus from 'widgets/integration-status';
 import type { WriteOffRequest } from 'shared/qamqor-data/types';
+import type {
+  EmployeeDto, OutletDto, ProductDto, ReasonCode, WriteOffDto,
+} from 'shared/api/types';
+const REASON_LABELS: Record<ReasonCode, string> = {
+  DAMAGED: 'Брак',
+  EXPIRED: 'Истёк срок годности',
+  OVERCOOKED: 'Пережарено/испорчено',
+  RAW_WASTE: 'Обрезка/отход',
+  DROPPED: 'Упал/разбился',
+  OTHER: 'Другое',
+};
+// Backend write-off + reference data → the UI shape RequestCard already renders.
+function toUiRequest(
+  dto: WriteOffDto,
+  products: Map<string, ProductDto>,
+  employees: Map<string, EmployeeDto>,
+  outlets: Map<string, OutletDto>,
+): WriteOffRequest {
+  const product = products.get(dto.product_id);
+  return {
+    id: dto.id,
+    employeeId: dto.employee_id,
+    employeeName: employees.get(dto.employee_id)?.name ?? dto.employee_id,
+    locationId: dto.outlet_id,
+    locationName: outlets.get(dto.outlet_id)?.name ?? dto.outlet_id,
+    productId: dto.product_id,
+    productName: product?.name ?? dto.product_id,
+    productType: product?.unit === 'штуки' ? 'unit' : 'weight',
+    quantity: dto.quantity,
+    wastePercent: undefined,
+    reasonCode: dto.reason_code,
+    reasonLabel: REASON_LABELS[dto.reason_code] ?? dto.reason_code,
+    stageCode: '',
+    stageLabel: `${dto.quantity} ${dto.unit}`,
+    comment: dto.comment,
+    photoId: dto.photo_id ?? '',
+    shift: dto.created_at,
+    timestamp: dto.created_at,
+    status: dto.status,
+    writeOffType: dto.deduction_type === 'WITH_DEDUCTION' ? 'with_deduction' : 'no_deduction',
+    aiSuggestedType: true,
+    flags: [],
+    rejectionReason: dto.rejection_reason ?? undefined,
+  };
+}
 
 const FLAG_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   'exceeds-norm': { label: 'Превышение нормы отхода', color: '#D62828', bg: '#FDE8E8' },
@@ -59,18 +106,21 @@ function PhotoBlock({ photoId, isDuplicate }: { photoId: string; isDuplicate: bo
   );
 }
 
-function RequestCard({ req }: { req: WriteOffRequest }) {
-  const { approveRequest, rejectRequest } = useApp();
+interface RequestCardProps {
+  req: WriteOffRequest;
+  busy: boolean;
+  onApprove: (id: string) => void;
+  onReject: (id: string, reason: string) => void;
+}
+function RequestCard({ req, busy, onApprove, onReject }: RequestCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [rejReason, setRejReason] = useState('');
-
   const isFlagged = req.flags.length > 0;
   const isDuplicate = req.flags.includes('duplicate-photo');
-
   function handleReject() {
     if (!rejReason) return;
-    rejectRequest(req.id, rejReason);
+    onReject(req.id, rejReason);
     setRejecting(false);
   }
 
@@ -208,11 +258,11 @@ function RequestCard({ req }: { req: WriteOffRequest }) {
 
         {req.status === 'pending' && !rejecting && (
           <div className="flex gap-2 mt-3 pt-3 border-t border-stone-100">
-            <button onClick={() => approveRequest(req.id)} className="btn-success flex-1 text-sm py-2.5">
+            <button onClick={() => onApprove(req.id)} disabled={busy} className="btn-success flex-1 text-sm py-2.5 disabled:opacity-40">
               <CheckCircle2 className="w-4 h-4" />
               Одобрить
             </button>
-            <button onClick={() => setRejecting(true)} className="btn-danger flex-1 text-sm py-2.5">
+            <button onClick={() => setRejecting(true)} disabled={busy} className="btn-danger flex-1 text-sm py-2.5 disabled:opacity-40">
               <XCircle className="w-4 h-4" />
               Отклонить
             </button>
@@ -233,7 +283,7 @@ function RequestCard({ req }: { req: WriteOffRequest }) {
               ))}
             </select>
             <div className="flex gap-2">
-              <button onClick={handleReject} disabled={!rejReason} className="btn-danger flex-1 text-sm py-2.5 disabled:opacity-40">
+              <button onClick={handleReject} disabled={!rejReason || busy} className="btn-danger flex-1 text-sm py-2.5 disabled:opacity-40">
                 Подтвердить отклонение
               </button>
               <button onClick={() => setRejecting(false)} className="btn-secondary text-sm py-2.5 px-4">
@@ -255,23 +305,79 @@ function RequestCard({ req }: { req: WriteOffRequest }) {
 
 export default function QamqorManager() {
   const navigate = useNavigate();
-  const { requests, pendingCount, approvedTodayCount, flaggedCount } = useApp();
-
+  const { user } = useAuth();
+  const [writeOffs, setWriteOffs] = useState<WriteOffDto[]>([]);
+  const [products, setProducts] = useState<Map<string, ProductDto>>(new Map());
+  const [employees, setEmployees] = useState<Map<string, EmployeeDto>>(new Map());
+  const [outlets, setOutlets] = useState<Map<string, OutletDto>>(new Map());
   const [filter, setFilter] = useState<'all' | 'pending' | 'flagged'>('all');
-
-  const sorted = [...requests].sort((a, b) => {
-    const aScore = a.status === 'pending' && a.flags.length > 0 ? 2 : a.status === 'pending' ? 1 : 0;
-    const bScore = b.status === 'pending' && b.flags.length > 0 ? 2 : b.status === 'pending' ? 1 : 0;
-    if (aScore !== bScore) return bScore - aScore;
-    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-  });
-
-  const filtered = sorted.filter(r => {
-    if (filter === 'pending') return r.status === 'pending';
-    if (filter === 'flagged') return r.flags.length > 0;
-    return true;
-  });
-
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const loadQueue = useCallback(async () => {
+    setWriteOffs(await apiClient.listWriteOffs({ status: 'pending' }));
+  }, []);
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    Promise.all([
+      apiClient.listProducts(),
+      apiClient.listEmployees(),
+      apiClient.listOutlets(),
+      apiClient.listWriteOffs({ status: 'pending' }),
+    ])
+      .then(([prods, emps, outs, queue]) => {
+        if (!active) return;
+        setProducts(new Map(prods.map(p => [p.id, p])));
+        setEmployees(new Map(emps.map(e => [e.id, e])));
+        setOutlets(new Map(outs.map(o => [o.id, o])));
+        setWriteOffs(queue);
+        setError('');
+      })
+      .catch(err => {
+        if (active) setError(err instanceof ApiError ? err.code : 'network_error');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
+  const handleReview = useCallback(
+    async (id: string, decision: 'approved' | 'rejected', rejectionReason?: string) => {
+      const reviewerId = user?.id;
+      if (!reviewerId) {
+        setError('Сессия не найдена — войдите как проверяющий');
+        return;
+      }
+      setBusyId(id);
+      try {
+        await apiClient.reviewWriteOff(id, {
+          reviewer_id: reviewerId,
+          decision,
+          rejection_reason: rejectionReason,
+        });
+        await loadQueue();
+        setError('');
+      } catch (err) {
+        setError(err instanceof ApiError ? err.code : 'network_error');
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [user, loadQueue],
+  );
+  const uiRequests = useMemo(
+    () => writeOffs.map(dto => toUiRequest(dto, products, employees, outlets)),
+    [writeOffs, products, employees, outlets],
+  );
+  const flaggedCount = uiRequests.filter(r => r.writeOffType === 'with_deduction').length;
+  const noDeductionCount = uiRequests.length - flaggedCount;
+  const sorted = [...uiRequests].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+  );
+  const filtered = sorted.filter(r =>
+    filter === 'flagged' ? r.writeOffType === 'with_deduction' : true,
+  );
   return (
     <div className="min-h-screen bg-offwhite">
       <div className="bg-ink text-white">
@@ -288,12 +394,11 @@ export default function QamqorManager() {
           </div>
           <h1 className="text-2xl font-black">Кабинет проверяющего</h1>
           <p className="text-text-muted text-sm mt-0.5">Bahandi · все точки · Алматы</p>
-
           <div className="flex gap-6 mt-5">
             {[
-              { label: 'Новых', value: pendingCount, color: '#F5A300' },
-              { label: 'Одобрено', value: approvedTodayCount, color: '#2E7D32' },
-              { label: 'Под вопросом', value: flaggedCount, color: '#D62828' },
+              { label: 'Новых', value: uiRequests.length, color: '#F5A300' },
+              { label: 'С удержанием', value: flaggedCount, color: '#D62828' },
+              { label: 'Без удержания', value: noDeductionCount, color: '#2E7D32' },
             ].map(s => (
               <div key={s.label}>
                 <div className="text-3xl font-black" style={{ color: s.color }}>{s.value}</div>
@@ -303,13 +408,20 @@ export default function QamqorManager() {
           </div>
         </div>
       </div>
-
       <div className="max-w-5xl mx-auto px-6 py-6">
+        <div className="mb-5">
+          <IntegrationStatus />
+        </div>
+        {error && (
+          <div className="mb-5 px-4 py-3 rounded-xl text-sm font-medium text-theft bg-theft-light">
+            Ошибка: {error}
+          </div>
+        )}
         <div className="flex gap-2 mb-5">
           {([
             { id: 'all', label: 'Все заявки' },
             { id: 'pending', label: 'На проверке' },
-            { id: 'flagged', label: 'Подозрительные' },
+            { id: 'flagged', label: 'С удержанием' },
           ] as const).map(f => (
             <button
               key={f.id}
@@ -329,13 +441,20 @@ export default function QamqorManager() {
             </button>
           ))}
         </div>
-
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-20 text-text-muted">Загрузка заявок…</div>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-20 text-text-muted">Нет заявок в этой категории</div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {filtered.map(req => (
-              <RequestCard key={req.id} req={req} />
+              <RequestCard
+                key={req.id}
+                req={req}
+                busy={busyId === req.id}
+                onApprove={id => handleReview(id, 'approved')}
+                onReject={(id, reason) => handleReview(id, 'rejected', reason)}
+              />
             ))}
           </div>
         )}

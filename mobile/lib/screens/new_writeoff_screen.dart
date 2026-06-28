@@ -5,6 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../store/write_off_store.dart';
+import '../api/api_client.dart';
+import '../api/dto.dart';
+import '../store/auth_store.dart';
 import '../theme.dart';
 
 enum WriteoffType { shtuchny, vesovoy }
@@ -61,6 +64,7 @@ class _NewWriteoffScreenState extends State<NewWriteoffScreen> {
   XFile? _photo;
   Uint8List? _photoBytes;
   bool _submitting = false;
+  List<ProductDto> _productList = [];
 
   // Default to with_deduction until AI photo analysis overrides it.
   // AI response shape: { is_food_waste, detected_product, condition,
@@ -73,6 +77,7 @@ class _NewWriteoffScreenState extends State<NewWriteoffScreen> {
   @override
   void initState() {
     super.initState();
+    _loadProducts();
     if (widget.initialPhotoPath != null) {
       _photo = XFile(widget.initialPhotoPath!);
       _photo!.readAsBytes().then((bytes) {
@@ -127,6 +132,22 @@ class _NewWriteoffScreenState extends State<NewWriteoffScreen> {
     return null;
   }
 
+  Future<void> _loadProducts() async {
+    try {
+      final list = await context.read<ApiClient>().listProducts();
+      if (mounted) setState(() => _productList = list);
+    } catch (_) {
+      // Offline — fall back to the static product list.
+    }
+  }
+
+  ProductDto? _findProduct(String? name) {
+    for (final p in _productList) {
+      if (p.name == name) return p;
+    }
+    return null;
+  }
+
   Future<void> _pickPhoto() async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
@@ -145,25 +166,28 @@ class _NewWriteoffScreenState extends State<NewWriteoffScreen> {
 
   Future<void> _submit() async {
     setState(() => _submitting = true);
-    await Future.delayed(const Duration(milliseconds: 400));
-    if (!mounted) return;
-
-    final entry = WriteOffEntry(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      product: _product ?? '',
+    final user = context.read<AuthStore>().user;
+    final store = context.read<WriteOffStore>();
+    final product = _findProduct(_product);
+    final withholding = _withholding;
+    final entry = await store.submit(
+      outletId: user?.outlet.id ?? '',
+      employeeId: user?.id ?? '',
+      productId: product?.id ?? '',
+      productName: _product ?? '',
       quantity: _quantityController.text,
-      unit: _type == WriteoffType.shtuchny ? 'шт' : 'г',
-      reason: _reason ?? '',
+      displayUnit: _type == WriteoffType.shtuchny ? 'шт' : 'г',
+      reasonCode: _reason ?? 'OTHER',
+      deductionType: withholding ? 'WITH_DEDUCTION' : 'NO_DEDUCTION',
+      chargedEmployeeId: withholding ? user?.id : null,
       comment: _commentController.text.trim(),
-      submittedAt: DateTime.now(),
-      status: 'pending',
-      writeOffType: _withholding ? 'with_deduction' : 'no_deduction',
+      photoBytes: _photoBytes,
       aiSuggestedType: _aiSetType && !_overrodeAi,
-      overrideExplanation: _overrodeAi && _overrideReasonController.text.isNotEmpty
-          ? _overrideReasonController.text.trim()
-          : null,
+      overrideExplanation:
+          _overrodeAi && _overrideReasonController.text.isNotEmpty
+              ? _overrideReasonController.text.trim()
+              : null,
     );
-    await context.read<WriteOffStore>().add(entry);
     if (!mounted) return;
 
     context.go('/success', extra: entry);
@@ -203,6 +227,9 @@ class _NewWriteoffScreenState extends State<NewWriteoffScreen> {
               child: switch (_step) {
                 0 => _StepProduct(
                     type: _type,
+                    products: _productList.isEmpty
+                        ? _products
+                        : _productList.map((p) => p.name).toList(),
                     product: _product,
                     quantity: _quantityController,
                     onTypeChanged: (t) => setState(() => _type = t),
@@ -297,11 +324,13 @@ class _StepIndicator extends StatelessWidget {
 class _StepProduct extends StatelessWidget {
   const _StepProduct({
     required this.type,
+    required this.products,
     required this.product,
     required this.quantity,
     required this.onTypeChanged,
     required this.onProductChanged,
   });
+  final List<String> products;
   final WriteoffType type;
   final String? product;
   final TextEditingController quantity;
@@ -318,7 +347,7 @@ class _StepProduct extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: _products.map((p) {
+          children: products.map((p) {
             final selected = product == p;
             return GestureDetector(
               onTap: () => onProductChanged(p),

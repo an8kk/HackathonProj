@@ -3,14 +3,13 @@
   "private": true,
   "version": "0.0.0",
   "workspaces": [
-    "backend",
     "frontend"
   ],
   "scripts": {
     "dev": "docker compose up --build",
-    "test": "npm run test --workspaces",
-    "build": "npm run build --workspaces",
-    "lint": "npm run lint --workspaces"
+    "test": "npm run test -w @hackathon/frontend",
+    "build": "npm run build -w @hackathon/frontend",
+    "lint": "npm run lint -w @hackathon/frontend"
   },
   "engines": {
     "node": ">=22.0.0"

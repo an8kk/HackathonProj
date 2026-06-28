@@ -1,15 +1,15 @@
-FROM node:22-alpine AS dependencies
-WORKDIR /app
-COPY package.json package-lock.json ./
-COPY backend/package.json backend/package.json
-COPY frontend/package.json frontend/package.json
-RUN npm ci
+FROM python:3.12-slim AS runtime
 
-FROM node:22-alpine AS runner
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 WORKDIR /app
-ENV NODE_ENV=development
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY package.json package-lock.json ./
-COPY backend ./backend
+
+COPY backend/pyproject.toml ./
+COPY backend/src ./src
+
+RUN pip install --no-cache-dir -e .
+
 EXPOSE 4000
-CMD ["npm", "run", "dev", "-w", "@hackathon/backend"]
+
+CMD ["litestar", "--app", "bahandi_backend.app:app", "run", "--host", "0.0.0.0", "--port", "4000"]

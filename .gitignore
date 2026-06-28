@@ -4,6 +4,10 @@ build/
 coverage/
 .vite/
 *.tsbuildinfo
+*.egg-info/
+__pycache__/
+.pytest_cache/
+backend/storage/
 .env
 .env.*
 !.env.example
