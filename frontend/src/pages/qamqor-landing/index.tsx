@@ -14,29 +14,29 @@ const ROLE_ROUTES: Record<Role, string> = {
 const roles = [
   {
     path: '/employee',
+    pin: '1111',
     icon: Smartphone,
     title: 'Сотрудник',
     subtitle: 'Подать заявку на списание',
     desc: 'Мобильный вид · Повар Айгерим С.',
-    color: 'from-stone-700 to-stone-800',
     accent: '#F5A300',
   },
   {
     path: '/manager',
+    pin: '2222',
     icon: ClipboardCheck,
     title: 'Менеджер',
     subtitle: 'Проверить и одобрить заявки',
-    desc: 'Рабочий стол · 3 заявки на проверке',
-    color: 'from-stone-700 to-stone-800',
+    desc: 'Рабочий стол · очередь на проверке',
     accent: '#F5A300',
   },
   {
     path: '/dashboard',
+    pin: '9999',
     icon: BarChart3,
     title: 'Владелец',
     subtitle: 'Аналитика и контроль сети',
     desc: 'Дашборд · 5 точек · Алматы',
-    color: 'from-stone-800 to-stone-900',
     accent: '#F5A300',
   },
 ];
@@ -49,17 +49,22 @@ export default function QamqorLanding() {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const submitting = loginMutation.isPending;
-  async function handleLogin(e: FormEvent) {
-    e.preventDefault();
-    if (!pin || submitting) return;
+  async function loginWithPin(value: string) {
+    if (submitting) return;
     setError('');
     try {
-      const user = await loginMutation.mutateAsync(pin);
+      const user = await loginMutation.mutateAsync(value);
       applySession(user);
       navigate(ROLE_ROUTES[user.role] ?? '/');
     } catch (err) {
       setError(err instanceof ApiError ? err.code : 'network_error');
     }
+  }
+
+  async function handleLogin(e: FormEvent) {
+    e.preventDefault();
+    if (!pin) return;
+    await loginWithPin(pin.trim());
   }
   return (
     <div className="min-h-screen bg-ink flex flex-col items-center justify-center px-4 py-12">
@@ -136,7 +141,7 @@ export default function QamqorLanding() {
         </form>
         <div className="w-full flex flex-col gap-4">
           <p className="text-xs font-semibold text-text-muted uppercase tracking-wider text-center mb-1">
-            Роли в системе
+            Демо-вход · нажмите роль для входа
           </p>
           {roles.map(role => {
             const Icon = role.icon;
@@ -144,7 +149,8 @@ export default function QamqorLanding() {
               <button
                 key={role.path}
                 type="button"
-                onClick={() => pinRef.current?.focus()}
+                disabled={submitting}
+                onClick={() => loginWithPin(role.pin)}
                 className="w-full flex items-center gap-5 p-5 rounded-2xl text-left transition-all duration-150 hover:scale-[1.01] active:scale-[0.99]"
                 style={{
                   background: 'rgba(255,255,255,0.05)',
@@ -171,7 +177,15 @@ export default function QamqorLanding() {
                   <div className="text-white/70 text-sm mt-0.5">{role.subtitle}</div>
                   <div className="text-text-muted text-xs mt-1">{role.desc}</div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-text-muted flex-shrink-0" />
+                <div className="flex flex-col items-end flex-shrink-0">
+                  <span
+                    className="px-2 py-0.5 rounded-full text-xs font-bold mb-1"
+                    style={{ background: 'rgba(245,163,0,0.15)', color: role.accent }}
+                  >
+                    PIN {role.pin}
+                  </span>
+                  <ChevronRight className="w-5 h-5 text-text-muted" />
+                </div>
               </button>
             );
           })}
