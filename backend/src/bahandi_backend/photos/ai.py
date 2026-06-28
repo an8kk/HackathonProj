@@ -125,7 +125,7 @@ class OpenAiPhotoAnalyzer:
         data_url = f'data:{content_type};base64,{base64.b64encode(content).decode("ascii")}'
         payload = {
             'model': self._model,
-            'max_tokens': 500,
+            'max_completion_tokens': 500,
             'response_format': {'type': 'json_object'},
             'messages': [
                 {

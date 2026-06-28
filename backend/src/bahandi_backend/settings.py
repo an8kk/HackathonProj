@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     # AI photo analysis. OpenAI is preferred when set, then Anthropic, else a
     # degraded rule-based fallback. All over httpx (no SDK).
     openai_api_key: str | None = None
-    openai_model: str = 'gpt-4o-mini'
+    openai_model: str = 'gpt-5.4-nano'
     anthropic_api_key: str | None = None
     anthropic_model: str = 'claude-3-5-sonnet-latest'
     # iiko Server API (on-prem write-off act creation)
