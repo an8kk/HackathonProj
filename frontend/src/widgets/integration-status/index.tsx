@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
 import { Activity, CheckCircle2, XCircle, Plug } from 'lucide-react';
-import { apiClient, ApiError } from 'shared/api/client';
-import type { AnalyticsSummaryDto, IikoStatusDto } from 'shared/api/types';
+import { ApiError } from 'shared/api/client';
+import { useAnalyticsSummary, useIikoStatus } from 'shared/api/queries';
 
 function Flag({ ok, label }: { ok: boolean; label: string }) {
   return (
@@ -16,30 +15,19 @@ function Flag({ ok, label }: { ok: boolean; label: string }) {
 }
 
 export default function IntegrationStatus() {
-  const [iiko, setIiko] = useState<IikoStatusDto | null>(null);
-  const [summary, setSummary] = useState<AnalyticsSummaryDto | null>(null);
-  const [error, setError] = useState('');
+  const iikoQuery = useIikoStatus();
+  const summaryQuery = useAnalyticsSummary();
 
-  useEffect(() => {
-    let active = true;
-    Promise.all([apiClient.iikoStatus(), apiClient.analyticsSummary()])
-      .then(([status, sum]) => {
-        if (!active) return;
-        setIiko(status);
-        setSummary(sum);
-      })
-      .catch(err => {
-        if (active) setError(err instanceof ApiError ? err.code : 'network_error');
-      });
-    return () => { active = false; };
-  }, []);
-
+  const error = iikoQuery.error ?? summaryQuery.error;
   if (error) {
+    const code = error instanceof ApiError ? error.code : 'network_error';
     return (
-      <div className="card p-4 text-sm text-theft">Интеграции недоступны: {error}</div>
+      <div className="card p-4 text-sm text-theft">Интеграции недоступны: {code}</div>
     );
   }
 
+  const iiko = iikoQuery.data;
+  const summary = summaryQuery.data;
   if (!iiko || !summary) {
     return <div className="card p-4 text-sm text-text-muted">Загрузка интеграций…</div>;
   }
@@ -58,38 +46,18 @@ export default function IntegrationStatus() {
         <p className="text-sm font-bold text-text-primary">Интеграции iiko</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="rounded-xl p-3 bg-offwhite">
-          <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">
-            {iiko.iiko_web.provider}
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            <Flag ok={iiko.iiko_web.configured} label={iiko.iiko_web.configured ? 'настроено' : 'не настроено'} />
-            <Flag
-              ok={iiko.iiko_web.write_off_act_endpoint_available}
-              label="акт списания"
-            />
-          </div>
-          <p className="text-xs text-text-muted mt-2">
-            Эндпоинты: {iiko.iiko_web.supported_endpoints.join(', ') || '—'}
-          </p>
+      <div className="rounded-xl p-3 bg-offwhite">
+        <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">
+          {iiko.provider}
+        </p>
+        <p className="text-xs text-text-muted mb-2">{iiko.purpose}</p>
+        <div className="flex flex-wrap gap-1.5">
+          <Flag ok={iiko.configured} label={iiko.configured ? 'настроено' : 'не настроено'} />
+          <Flag ok={iiko.write_off_act_endpoint_available} label="акт списания" />
         </div>
-
-        <div className="rounded-xl p-3 bg-offwhite">
-          <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">
-            {iiko.iiko_server.provider}
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            <Flag ok={iiko.iiko_server.configured} label={iiko.iiko_server.configured ? 'настроено' : 'не настроено'} />
-            <Flag
-              ok={iiko.iiko_server.write_off_act_endpoint_available}
-              label="акт списания"
-            />
-          </div>
-          <p className="text-xs text-text-muted mt-2 font-mono break-all">
-            {iiko.iiko_server.write_off_act_endpoint}
-          </p>
-        </div>
+        <p className="text-xs text-text-muted mt-2 font-mono break-all">
+          {iiko.write_off_act_endpoint}
+        </p>
       </div>
 
       <div className="flex items-center gap-2 mt-4 mb-2">

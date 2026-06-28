@@ -11,6 +11,9 @@ from ..schemas import (
     CreateNormRequest,
     CreateOutletRequest,
     CreateProductRequest,
+    UpdateEmployeeRequest,
+    UpdateOutletRequest,
+    UpdateProductRequest,
 )
 from ..security import hash_pin
 from .errors import NotFoundError
@@ -55,6 +58,22 @@ async def create_outlet(session: AsyncSession, data: CreateOutletRequest) -> mod
     return outlet
 
 
+async def update_outlet(
+    session: AsyncSession, outlet_id: str, data: UpdateOutletRequest
+) -> models.Outlet:
+    outlet = await session.get(models.Outlet, outlet_id)
+    if outlet is None:
+        raise NotFoundError('outlet_not_found')
+    if data.name is not None:
+        outlet.name = data.name
+    if data.address is not None:
+        outlet.address = data.address
+    if data.iiko_store_id is not None:
+        outlet.iiko_store_id = data.iiko_store_id
+    await session.flush()
+    return outlet
+
+
 async def create_employee(session: AsyncSession, data: CreateEmployeeRequest) -> models.Employee:
     if await session.get(models.Outlet, data.outlet_id) is None:
         raise NotFoundError('outlet_not_found')
@@ -66,6 +85,25 @@ async def create_employee(session: AsyncSession, data: CreateEmployeeRequest) ->
         created_at=datetime.now(UTC),
     )
     session.add(employee)
+    await session.flush()
+    await session.refresh(employee)
+    return employee
+
+
+async def update_employee(
+    session: AsyncSession, employee_id: str, data: UpdateEmployeeRequest
+) -> models.Employee:
+    employee = await session.get(models.Employee, employee_id)
+    if employee is None:
+        raise NotFoundError('employee_not_found')
+    if data.name is not None:
+        employee.name = data.name
+    if data.role is not None:
+        employee.role = data.role
+    if data.pin is not None:
+        employee.pin_hash = hash_pin(data.pin)
+    if data.active is not None:
+        employee.active = data.active
     await session.flush()
     await session.refresh(employee)
     return employee
@@ -91,6 +129,24 @@ async def create_product(session: AsyncSession, data: CreateProductRequest) -> m
                 effective_from=datetime.now(UTC),
             )
         )
+    await session.flush()
+    return product
+
+
+async def update_product(
+    session: AsyncSession, product_id: str, data: UpdateProductRequest
+) -> models.Product:
+    product = await session.get(models.Product, product_id)
+    if product is None:
+        raise NotFoundError('product_not_found')
+    if data.name is not None:
+        product.name = data.name
+    if data.unit is not None:
+        product.unit = data.unit
+    if data.cost_per_unit is not None:
+        product.cost_per_unit = data.cost_per_unit
+    if data.iiko_product_id is not None:
+        product.iiko_product_id = data.iiko_product_id
     await session.flush()
     return product
 

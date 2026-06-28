@@ -49,6 +49,21 @@ class NotConfiguredWriteOffSink:
         )
 
 
+class SimulatedWriteOffSink:
+    """Demo mode: behaves like a working iiko Server without real credentials.
+    Builds the real `writeoffDocument` XML and returns a successful sync with a
+    generated act number, so the end-to-end flow shows iiko confirmation. Enabled
+    via IIKO_SIMULATE for hackathon demos where a live iiko is unavailable.
+    """
+
+    configured = True
+
+    async def create_write_off_act(self, command: WriteOffActCommand) -> IikoSyncResult:
+        body = build_write_off_xml(command)
+        external_id = f'AKT-{command.request_id[:8].upper()}'
+        return IikoSyncResult(status='synced', external_id=external_id, request_xml=body)
+
+
 class IikoServerWriteOffSink:
     """Creates a write-off act (акт списания) via the iiko Server API.
 

@@ -4,9 +4,9 @@ from litestar.testing import TestClient
 
 
 def test_seeded_reference_data_is_available(client: TestClient) -> None:
-    assert len(client.get('/outlets').json()['data']) == 2
-    assert len(client.get('/products').json()['data']) == 4
-    assert len(client.get('/employees').json()['data']) == 4
+    assert len(client.get('/outlets').json()['data']) == 5
+    assert len(client.get('/products').json()['data']) == 8
+    assert len(client.get('/employees').json()['data']) >= 10
 
 
 def test_employees_can_be_filtered_by_outlet(client: TestClient) -> None:
@@ -33,7 +33,7 @@ def test_admin_can_create_product_with_norm(client: TestClient) -> None:
 
 
 def test_admin_can_create_outlet_and_employee(client: TestClient) -> None:
-    outlet = client.post('/admin/outlets', json={'name': 'Khan Shatyr', 'address': 'Астана'})
+    outlet = client.post('/admin/outlets', json={'name': 'Esentai Mall', 'address': 'Алматы'})
     assert outlet.status_code == 201
     outlet_id = outlet.json()['data']['id']
 
@@ -45,3 +45,58 @@ def test_admin_can_create_outlet_and_employee(client: TestClient) -> None:
 
     login = client.post('/auth/login', json={'pin': '4444'})
     assert login.status_code == 200
+
+
+def test_admin_can_update_and_deactivate_employee(client: TestClient) -> None:
+    created = client.post(
+        '/admin/employees',
+        json={'outlet_id': 'outlet-mega', 'name': 'Темп Сотрудник', 'role': 'sender', 'pin': '4455'},
+    ).json()['data']
+    employee_id = created['id']
+
+    # update name + role
+    updated = client.patch(
+        f'/admin/employees/{employee_id}',
+        json={'name': 'Обновлён Сотрудник', 'role': 'reviewer'},
+    )
+    assert updated.status_code == 200
+    assert updated.json()['data']['name'] == 'Обновлён Сотрудник'
+    assert updated.json()['data']['role'] == 'reviewer'
+
+    # deactivate -> login with their PIN must fail
+    deactivated = client.patch(f'/admin/employees/{employee_id}', json={'active': False})
+    assert deactivated.status_code == 200
+    assert deactivated.json()['data']['active'] is False
+    assert client.post('/auth/login', json={'pin': '4455'}).status_code == 401
+
+
+def test_update_missing_employee_is_404(client: TestClient) -> None:
+    assert client.patch('/admin/employees/nope', json={'name': 'X'}).status_code == 404
+
+
+def test_admin_can_update_product(client: TestClient) -> None:
+    created = client.post(
+        '/admin/products',
+        json={'name': 'Тестовый продукт', 'unit': 'штуки', 'cost_per_unit': 10},
+    ).json()['data']
+
+    updated = client.patch(
+        f'/admin/products/{created["id"]}',
+        json={'name': 'Тестовый продукт 2', 'cost_per_unit': 25},
+    )
+    assert updated.status_code == 200
+    assert updated.json()['data']['name'] == 'Тестовый продукт 2'
+    assert updated.json()['data']['cost_per_unit'] == 25
+
+
+def test_admin_can_update_outlet(client: TestClient) -> None:
+    updated = client.patch(
+        '/admin/outlets/outlet-mega',
+        json={'address': 'Новый адрес 123'},
+    )
+    assert updated.status_code == 200
+    assert updated.json()['data']['address'] == 'Новый адрес 123'
+
+
+def test_update_missing_product_is_404(client: TestClient) -> None:
+    assert client.patch('/admin/products/nope', json={'name': 'X'}).status_code == 404

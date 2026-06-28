@@ -43,6 +43,18 @@ export interface ProductDto {
 
 export type PhotoMetadataStatus = 'valid' | 'warning' | 'invalid';
 
+/** AI verdict attached to a photo. All fields optional — the backend default is `{}`. */
+export interface PhotoAiAnalysis {
+  is_food_waste?: boolean | null;
+  detected_product?: string | null;
+  confidence?: number;
+  condition?: string | null;
+  suggested_reason?: ReasonCode | null;
+  fraud_warnings?: string[];
+  reviewer_note?: string | null;
+  status?: string;
+}
+
 export interface PhotoDto {
   id: string;
   filename: string;
@@ -54,7 +66,7 @@ export interface PhotoDto {
   uploaded_at: string;
   metadata_status: PhotoMetadataStatus;
   validation_errors: string[];
-  ai_analysis: unknown;
+  ai_analysis: PhotoAiAnalysis;
 }
 
 export type ReasonCode = 'DAMAGED' | 'EXPIRED' | 'OVERCOOKED' | 'RAW_WASTE' | 'DROPPED' | 'OTHER';
@@ -129,24 +141,146 @@ export interface AnalyticsSummaryDto {
   approved_cost_value: number;
 }
 
-export interface IikoWebStatusDto {
+export interface IikoStatusDto {
   provider: string;
-  configured: boolean;
-  base_url: string | null;
-  supported_endpoints: string[];
-  write_off_act_endpoint_available: boolean;
-}
-
-export interface IikoServerStatusDto {
-  provider: string;
+  purpose: string;
   configured: boolean;
   base_url: string | null;
   write_off_act_endpoint: string;
   write_off_act_endpoint_available: boolean;
+  note: string;
 }
 
-export interface IikoStatusDto {
-  iiko_web: IikoWebStatusDto;
-  iiko_server: IikoServerStatusDto;
-  note: string;
+export interface NormDto {
+  id: string;
+  product_id: string;
+  outlet_id: string | null;
+  max_waste_pct: number;
+  effective_from: string | null;
+  effective_to: string | null;
+}
+
+export interface ListNormsParams {
+  outlet_id?: string;
+  product_id?: string;
+}
+
+export interface CreateProductBody {
+  name: string;
+  unit: string;
+  cost_per_unit: number;
+  norm_waste_pct?: number;
+  iiko_product_id?: string | null;
+}
+
+export interface CreateNormBody {
+  product_id: string;
+  outlet_id?: string | null;
+  max_waste_pct: number;
+  effective_from?: string;
+}
+
+export interface CreateOutletBody {
+  name: string;
+  address?: string;
+  iiko_store_id?: string | null;
+}
+
+export interface CreateEmployeeBody {
+  outlet_id: string;
+  name: string;
+  role: string;
+  pin: string;
+}
+
+export interface UpdateEmployeeBody {
+  name?: string;
+  role?: string;
+  pin?: string;
+  active?: boolean;
+}
+
+export interface UpdateProductBody {
+  name?: string;
+  unit?: string;
+  cost_per_unit?: number;
+  iiko_product_id?: string | null;
+}
+
+export interface UpdateOutletBody {
+  name?: string;
+  address?: string;
+  iiko_store_id?: string | null;
+}
+
+/* ─────────────────────────── Analytics rollups ─────────────────────────── */
+
+export type OutletZone = 'green' | 'amber' | 'red';
+export type InvestigationSeverity = 'high' | 'medium';
+
+/** `GET /analytics/outlets` — per-outlet rollup. */
+export interface AnalyticsOutletDto {
+  outlet_id: string;
+  outlet_name: string;
+  address: string | null;
+  total_requests: number;
+  approved: number;
+  pending: number;
+  rejected: number;
+  write_off_cost: number;
+  unexplained_variance: number;
+  zone: OutletZone;
+}
+
+/** `GET /analytics/employees` — leaderboard. */
+export interface AnalyticsEmployeeDto {
+  employee_id: string;
+  employee_name: string;
+  outlet_name: string | null;
+  total_requests: number;
+  approved: number;
+  rejected: number;
+  with_deduction: number;
+  times_charged: number;
+}
+
+/** `GET /analytics/products`. */
+export interface AnalyticsProductDto {
+  product_id: string;
+  product_name: string | null;
+  write_off_count: number;
+  quantity: number;
+  cost_value: number;
+}
+
+/** `GET /analytics/hourly` — 24 rows. */
+export interface AnalyticsHourlyDto {
+  hour: number;
+  count: number;
+}
+
+/** `GET /analytics/investigations` — suspicious clusters. */
+export interface AnalyticsInvestigationDto {
+  employee_id: string;
+  employee_name: string | null;
+  product_id: string;
+  product_name: string | null;
+  reason_code: ReasonCode;
+  occurrences: number;
+  severity: InvestigationSeverity;
+}
+
+/** `GET /inventory/reconciliation` — per outlet+product stock truth. */
+export interface ReconciliationRowDto {
+  outlet_id: string;
+  product_id: string;
+  product_name: string | null;
+  theoretical_balance: number;
+  actual_balance: number;
+  write_off_total: number;
+  unexplained_variance: number;
+}
+
+export interface ReconciliationParams {
+  outlet_id?: string;
 }

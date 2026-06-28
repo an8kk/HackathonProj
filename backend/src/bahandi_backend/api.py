@@ -3,13 +3,16 @@ from __future__ import annotations
 import base64
 from typing import Any
 
-from litestar import Request, get, patch, post
+from litestar import Request, Response, get, patch, post
 from litestar.di import Provide
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from .auth.guards import require_roles
+from .db import models
 from .integrations.iiko import service as iiko_service
-from .integrations.iiko.factory import build_web_client, build_write_off_sink
-from .photos.ai import RuleBasedPhotoAnalyzer
+from .integrations.iiko.factory import build_write_off_sink
+from .photos.storage import build_storage
+from .services.errors import NotFoundError
 from .schemas import (
     CreateEmployeeRequest,
     CreateNormRequest,
@@ -23,6 +26,9 @@ from .schemas import (
     PhotoUploadRequest,
     ReviewWriteOffRequest,
     SupplyRequest,
+    UpdateEmployeeRequest,
+    UpdateOutletRequest,
+    UpdateProductRequest,
 )
 from .serializers import (
     employee_dict,
@@ -95,19 +101,40 @@ async def list_products(db_session: AsyncSession) -> dict[str, Any]:
     return ok([product_dict(p) for p in await catalog_service.list_products(db_session)])
 
 
-@post('/admin/outlets', status_code=201)
+@post('/admin/outlets', status_code=201, guards=[require_roles('owner')])
 async def create_outlet(data: CreateOutletRequest, db_session: AsyncSession) -> dict[str, Any]:
     return ok(outlet_dict(await catalog_service.create_outlet(db_session, data)))
 
 
-@post('/admin/employees', status_code=201)
+@patch('/admin/outlets/{outlet_id:str}', guards=[require_roles('owner')])
+async def update_outlet(
+    outlet_id: str, data: UpdateOutletRequest, db_session: AsyncSession
+) -> dict[str, Any]:
+    return ok(outlet_dict(await catalog_service.update_outlet(db_session, outlet_id, data)))
+
+
+@post('/admin/employees', status_code=201, guards=[require_roles('owner')])
 async def create_employee(data: CreateEmployeeRequest, db_session: AsyncSession) -> dict[str, Any]:
     return ok(employee_dict(await catalog_service.create_employee(db_session, data)))
 
 
-@post('/admin/products', status_code=201)
+@patch('/admin/employees/{employee_id:str}', guards=[require_roles('owner')])
+async def update_employee(
+    employee_id: str, data: UpdateEmployeeRequest, db_session: AsyncSession
+) -> dict[str, Any]:
+    return ok(employee_dict(await catalog_service.update_employee(db_session, employee_id, data)))
+
+
+@post('/admin/products', status_code=201, guards=[require_roles('owner')])
 async def create_product(data: CreateProductRequest, db_session: AsyncSession) -> dict[str, Any]:
     return ok(product_dict(await catalog_service.create_product(db_session, data)))
+
+
+@patch('/admin/products/{product_id:str}', guards=[require_roles('owner')])
+async def update_product(
+    product_id: str, data: UpdateProductRequest, db_session: AsyncSession
+) -> dict[str, Any]:
+    return ok(product_dict(await catalog_service.update_product(db_session, product_id, data)))
 
 
 @get('/norms')
@@ -120,12 +147,12 @@ async def list_norms(db_session: AsyncSession, request: Request) -> dict[str, An
     return ok([norm_dict(n) for n in norms])
 
 
-@post('/admin/norms', status_code=201)
+@post('/admin/norms', status_code=201, guards=[require_roles('owner')])
 async def create_norm(data: CreateNormRequest, db_session: AsyncSession) -> dict[str, Any]:
     return ok(norm_dict(await catalog_service.create_norm(db_session, data)))
 
 
-@post('/photos', status_code=201)
+@post('/photos', status_code=201, guards=[require_roles('sender', 'reviewer', 'owner')])
 async def upload_photo(
     data: PhotoUploadRequest, db_session: AsyncSession, settings: Settings, request: Request
 ) -> dict[str, Any]:
@@ -148,6 +175,14 @@ async def analyze_photo(data: PhotoAnalysisRequest, settings: Settings) -> dict[
     return ok(result)
 
 
+@get('/photos/{photo_id:str}')
+async def get_photo(photo_id: str, db_session: AsyncSession) -> dict[str, Any]:
+    photo = await db_session.get(models.Photo, photo_id)
+    if photo is None:
+        raise NotFoundError('photo_not_found')
+    return ok(photo_dict(photo))
+
+
 @get('/write-offs')
 async def list_write_offs(db_session: AsyncSession, request: Request) -> dict[str, Any]:
     requests = await writeoff_service.list_requests(
@@ -163,12 +198,12 @@ async def get_write_off(request_id: str, db_session: AsyncSession) -> dict[str, 
     return ok(write_off_dict(await writeoff_service.get_request(db_session, request_id)))
 
 
-@post('/write-offs', status_code=201)
+@post('/write-offs', status_code=201, guards=[require_roles('sender', 'reviewer', 'owner')])
 async def create_write_off(data: CreateWriteOffRequest, db_session: AsyncSession) -> dict[str, Any]:
     return ok(write_off_dict(await writeoff_service.create_request(db_session, data)))
 
 
-@patch('/write-offs/{request_id:str}/review')
+@patch('/write-offs/{request_id:str}/review', guards=[require_roles('reviewer', 'owner')])
 async def review_write_off(
     request_id: str, data: ReviewWriteOffRequest, db_session: AsyncSession, settings: Settings
 ) -> dict[str, Any]:
@@ -221,6 +256,11 @@ async def analytics_employees(db_session: AsyncSession) -> dict[str, Any]:
     return ok(await analytics_service.employee_analytics(db_session))
 
 
+@get('/analytics/outlets')
+async def analytics_outlets(db_session: AsyncSession) -> dict[str, Any]:
+    return ok(await analytics_service.outlet_analytics(db_session))
+
+
 @get('/analytics/products')
 async def analytics_products(db_session: AsyncSession) -> dict[str, Any]:
     return ok(await analytics_service.product_analytics(db_session))
@@ -260,7 +300,7 @@ async def audit_events(db_session: AsyncSession) -> dict[str, Any]:
     )
 
 
-@post('/admin/qr-tokens', status_code=201)
+@post('/admin/qr-tokens', status_code=201, guards=[require_roles('owner')])
 async def create_qr_token(
     data: CreateQrTokenRequest, db_session: AsyncSession, settings: Settings
 ) -> dict[str, Any]:
@@ -277,28 +317,46 @@ async def resolve_qr_token(token: str, db_session: AsyncSession) -> dict[str, An
 async def iiko_status(settings: Settings) -> dict[str, Any]:
     return ok(iiko_service.integration_status(settings))
 
-
-@post('/integrations/iiko/sync-reference-data', status_code=200)
-async def iiko_sync_reference_data(db_session: AsyncSession, settings: Settings) -> dict[str, Any]:
-    result = await iiko_service.sync_reference_data(
-        db_session, settings=settings, client=build_web_client(settings)
-    )
-    return ok(result)
+_GUESSED_TYPES = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp'}
 
 
-ROUTE_HANDLERS = [
+@get('/media/{key:path}', media_type='application/octet-stream')
+async def serve_media(key: str, settings: Settings) -> Response[bytes]:
+    """Stream photo bytes from object storage (S3/MinIO) through the backend."""
+    from pathlib import Path as _Path
+    storage = build_storage(settings)
+    storage_key = str(key).lstrip('/')
+    try:
+        data = await storage.read(storage_key)
+    except Exception as error:  # noqa: BLE001 - missing key / storage error -> 404
+        raise NotFoundError('media_not_found') from error
+    media_type = _GUESSED_TYPES.get(_Path(storage_key).suffix.lower(), 'application/octet-stream')
+    return Response(content=data, media_type=media_type)
+
+
+PUBLIC_HANDLERS = [
     health,
     login,
+    serve_media,
+]
+
+# Everything below requires a valid JWT (enforced by the router guard in app.py).
+# Elevated actions additionally carry per-handler role guards.
+PROTECTED_HANDLERS = [
     list_outlets,
     list_employees,
     list_products,
     create_outlet,
+    update_outlet,
     create_employee,
+    update_employee,
     create_product,
+    update_product,
     list_norms,
     create_norm,
     upload_photo,
     analyze_photo,
+    get_photo,
     list_write_offs,
     get_write_off,
     create_write_off,
@@ -310,6 +368,7 @@ ROUTE_HANDLERS = [
     inventory_reconciliation,
     analytics_summary,
     analytics_employees,
+    analytics_outlets,
     analytics_products,
     analytics_hourly,
     analytics_investigations,
@@ -318,7 +377,6 @@ ROUTE_HANDLERS = [
     create_qr_token,
     resolve_qr_token,
     iiko_status,
-    iiko_sync_reference_data,
 ]
 
 DEPENDENCIES = {

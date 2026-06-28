@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Store, Users, Package, ShieldAlert, Scale, Shield, ArrowLeft,
+  LayoutDashboard, Store, Users, Package, ShieldAlert, Scale, Shield, ArrowLeft, Settings,
 } from 'lucide-react';
 import type { DashboardView } from 'shared/qamqor-data/types';
 import { useInvestigations } from 'shared/qamqor-context/InvestigationsContext';
+import { useAuth } from 'shared/auth/session';
 
 interface NavItem {
   view: DashboardView;
@@ -29,6 +30,7 @@ export default function Sidebar({
 }) {
   const navigate = useNavigate();
   const { openCount } = useInvestigations();
+  const { user } = useAuth();
 
   return (
     <aside className="bg-ink text-white flex flex-col w-full lg:w-60 lg:min-h-screen lg:sticky lg:top-0 no-print">
@@ -66,6 +68,16 @@ export default function Sidebar({
           );
         })}
       </nav>
+      {/* Admin panel — только владельцу */}
+      {user?.role === 'owner' && (
+        <button
+          onClick={() => navigate('/admin')}
+          className="mt-auto flex items-center gap-3 mx-3 mb-1 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors flex-shrink-0 whitespace-nowrap bg-amber-DEFAULT/15 text-amber-DEFAULT hover:bg-amber-DEFAULT/25"
+        >
+          <Settings className="w-[18px] h-[18px] flex-shrink-0" />
+          <span>Управление</span>
+        </button>
+      )}
 
       {/* Back to home */}
       <button

@@ -70,3 +70,23 @@ def test_duplicate_photo_hash_is_flagged(client: TestClient) -> None:
     data = second.json()['data']
     assert 'duplicate_photo_hash' in data['validation_errors']
     assert data['metadata_status'] == 'invalid'
+
+
+def test_photo_can_be_fetched_and_served(client: TestClient) -> None:
+    created = client.post(
+        '/photos',
+        json={
+            'filename': 'evidence.png',
+            'content_base64': sample_image_base64(),
+            'content_type': 'image/png',
+            'taken_at': datetime.now(UTC).isoformat(),
+        },
+    ).json()['data']
+
+    fetched = client.get(f'/photos/{created["id"]}')
+    assert fetched.status_code == 200
+    assert fetched.json()['data']['ai_analysis']
+
+    media = client.get(f'/media/{created["storage_key"]}')
+    assert media.status_code == 200
+    assert media.headers['content-type'] == 'image/png'

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CheckCircle2, XCircle, AlertTriangle, Clock, Camera,
@@ -6,7 +6,10 @@ import {
   Copy, Package,
 } from 'lucide-react';
 import { useAuth } from 'shared/auth/session';
-import { apiClient, ApiError } from 'shared/api/client';
+import { ApiError } from 'shared/api/client';
+import {
+  useEmployees, useOutlets, usePendingWriteOffs, usePhoto, useProducts, useReviewWriteOff,
+} from 'shared/api/queries';
 import IntegrationStatus from 'widgets/integration-status';
 import type { WriteOffRequest } from 'shared/qamqor-data/types';
 import type {
@@ -74,6 +77,99 @@ function formatDate(ts: string) {
   const d = new Date(ts);
   return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' }) +
     ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+}
+
+const MEDIA_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000';
+
+const METADATA_STATUS_STYLE: Record<string, { label: string; color: string; bg: string }> = {
+  valid: { label: 'метаданные в норме', color: '#2E7D32', bg: '#E8F5E9' },
+  warning: { label: 'предупреждения в метаданных', color: '#C47F00', bg: '#FFF3CC' },
+  invalid: { label: 'метаданные не прошли проверку', color: '#D62828', bg: '#FDE8E8' },
+};
+
+/** Reviewer evidence: the real photo image plus AI verdict + metadata, pulled via usePhoto. */
+function PhotoEvidence({ photoId }: { photoId: string }) {
+  const { data: photo, isLoading, error } = usePhoto(photoId || null);
+  if (!photoId) {
+    return (
+      <div className="mt-3 px-3 py-2 rounded-lg bg-stone-50 text-xs text-text-muted">
+        Фото к заявке не приложено
+      </div>
+    );
+  }
+  if (isLoading) {
+    return <div className="mt-3 px-3 py-2 rounded-lg bg-stone-50 text-xs text-text-muted">Загрузка фото…</div>;
+  }
+  if (error || !photo) {
+    const code = error instanceof ApiError ? error.code : 'недоступно';
+    return (
+      <div className="mt-3 px-3 py-2 rounded-lg bg-theft-light text-xs text-theft">
+        Не удалось загрузить фото: {code}
+      </div>
+    );
+  }
+
+  const ai = photo.ai_analysis;
+  const meta = METADATA_STATUS_STYLE[photo.metadata_status] ?? METADATA_STATUS_STYLE.warning;
+  const confidence = typeof ai.confidence === 'number' ? Math.round(ai.confidence * 100) : null;
+  const fraudWarnings = ai.fraud_warnings ?? [];
+
+  return (
+    <div className="mt-3 grid gap-3 sm:grid-cols-[8rem_1fr]">
+      <img
+        src={`${MEDIA_BASE_URL}/media/${photo.storage_key}`}
+        alt="Фото списания"
+        className="w-32 h-32 rounded-xl object-cover bg-stone-100"
+      />
+      <div className="min-w-0 text-xs">
+        <div className="flex flex-wrap items-center gap-1.5 mb-2">
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold"
+            style={{ background: meta.bg, color: meta.color }}
+          >
+            {meta.label}
+          </span>
+          {photo.validation_errors.map(v => (
+            <span
+              key={v}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold"
+              style={{ background: '#FDE8E8', color: '#D62828' }}
+            >
+              <AlertTriangle className="w-3 h-3" />
+              {v}
+            </span>
+          ))}
+        </div>
+        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+          <span className="text-text-muted">AI: продукт</span>
+          <span className="font-medium text-text-primary">{ai.detected_product ?? '—'}</span>
+          <span className="text-text-muted">Уверенность</span>
+          <span className="font-medium text-text-primary">{confidence !== null ? `${confidence}%` : '—'}</span>
+          <span className="text-text-muted">Причина (AI)</span>
+          <span className="font-medium text-text-primary">{ai.suggested_reason ?? '—'}</span>
+        </div>
+        {fraudWarnings.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {fraudWarnings.map(w => (
+              <span
+                key={w}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold"
+                style={{ background: '#FDE8E8', color: '#D62828' }}
+              >
+                <AlertTriangle className="w-3 h-3" />
+                {w}
+              </span>
+            ))}
+          </div>
+        )}
+        {ai.reviewer_note && (
+          <p className="mt-2 text-text-primary bg-offwhite rounded-lg px-2 py-1.5 italic">
+            {ai.reviewer_note}
+          </p>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function PhotoBlock({ photoId, isDuplicate }: { photoId: string; isDuplicate: boolean }) {
@@ -234,6 +330,8 @@ function RequestCard({ req, busy, onApprove, onReject }: RequestCardProps) {
               <div className="text-text-muted">ID фото</div>
               <div className="font-mono text-text-primary">{req.photoId}</div>
             </div>
+            <div className="text-xs font-semibold text-text-muted mb-1">Фото-доказательство и AI-вердикт</div>
+            <PhotoEvidence photoId={req.photoId} />
             {req.comment && (
               <div className="text-xs text-text-muted mb-1">Комментарий сотрудника:</div>
             )}
@@ -306,66 +404,59 @@ function RequestCard({ req, busy, onApprove, onReject }: RequestCardProps) {
 export default function QamqorManager() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [writeOffs, setWriteOffs] = useState<WriteOffDto[]>([]);
-  const [products, setProducts] = useState<Map<string, ProductDto>>(new Map());
-  const [employees, setEmployees] = useState<Map<string, EmployeeDto>>(new Map());
-  const [outlets, setOutlets] = useState<Map<string, OutletDto>>(new Map());
   const [filter, setFilter] = useState<'all' | 'pending' | 'flagged'>('all');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const loadQueue = useCallback(async () => {
-    setWriteOffs(await apiClient.listWriteOffs({ status: 'pending' }));
-  }, []);
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    Promise.all([
-      apiClient.listProducts(),
-      apiClient.listEmployees(),
-      apiClient.listOutlets(),
-      apiClient.listWriteOffs({ status: 'pending' }),
-    ])
-      .then(([prods, emps, outs, queue]) => {
-        if (!active) return;
-        setProducts(new Map(prods.map(p => [p.id, p])));
-        setEmployees(new Map(emps.map(e => [e.id, e])));
-        setOutlets(new Map(outs.map(o => [o.id, o])));
-        setWriteOffs(queue);
-        setError('');
-      })
-      .catch(err => {
-        if (active) setError(err instanceof ApiError ? err.code : 'network_error');
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => { active = false; };
-  }, []);
-  const handleReview = useCallback(
-    async (id: string, decision: 'approved' | 'rejected', rejectionReason?: string) => {
-      const reviewerId = user?.id;
-      if (!reviewerId) {
-        setError('Сессия не найдена — войдите как проверяющий');
-        return;
-      }
-      setBusyId(id);
-      try {
-        await apiClient.reviewWriteOff(id, {
-          reviewer_id: reviewerId,
-          decision,
-          rejection_reason: rejectionReason,
-        });
-        await loadQueue();
-        setError('');
-      } catch (err) {
-        setError(err instanceof ApiError ? err.code : 'network_error');
-      } finally {
-        setBusyId(null);
-      }
-    },
-    [user, loadQueue],
+  const [reviewError, setReviewError] = useState('');
+
+  const productsQuery = useProducts();
+  const employeesQuery = useEmployees();
+  const outletsQuery = useOutlets();
+  const pendingQuery = usePendingWriteOffs();
+  const reviewMutation = useReviewWriteOff();
+
+  const products = useMemo<Map<string, ProductDto>>(
+    () => new Map((productsQuery.data ?? []).map(p => [p.id, p])),
+    [productsQuery.data],
   );
+  const employees = useMemo<Map<string, EmployeeDto>>(
+    () => new Map((employeesQuery.data ?? []).map(e => [e.id, e])),
+    [employeesQuery.data],
+  );
+  const outlets = useMemo<Map<string, OutletDto>>(
+    () => new Map((outletsQuery.data ?? []).map(o => [o.id, o])),
+    [outletsQuery.data],
+  );
+  const writeOffs: WriteOffDto[] = pendingQuery.data ?? [];
+
+  const loading =
+    productsQuery.isLoading ||
+    employeesQuery.isLoading ||
+    outletsQuery.isLoading ||
+    pendingQuery.isLoading;
+  const loadError =
+    productsQuery.error ?? employeesQuery.error ?? outletsQuery.error ?? pendingQuery.error;
+  const error = reviewError || (loadError instanceof ApiError ? loadError.code : loadError ? 'network_error' : '');
+  const busyId = reviewMutation.isPending ? reviewMutation.variables?.id ?? null : null;
+
+  const handleReview = async (
+    id: string,
+    decision: 'approved' | 'rejected',
+    rejectionReason?: string,
+  ): Promise<void> => {
+    const reviewerId = user?.id;
+    if (!reviewerId) {
+      setReviewError('Сессия не найдена — войдите как проверяющий');
+      return;
+    }
+    setReviewError('');
+    try {
+      await reviewMutation.mutateAsync({
+        id,
+        body: { reviewer_id: reviewerId, decision, rejection_reason: rejectionReason },
+      });
+    } catch (err) {
+      setReviewError(err instanceof ApiError ? err.code : 'network_error');
+    }
+  };
   const uiRequests = useMemo(
     () => writeOffs.map(dto => toUiRequest(dto, products, employees, outlets)),
     [writeOffs, products, employees, outlets],

@@ -1,16 +1,32 @@
 import { buildApiUrl } from './http-client';
 import type {
+  AnalyticsEmployeeDto,
+  AnalyticsHourlyDto,
+  AnalyticsInvestigationDto,
+  AnalyticsOutletDto,
+  AnalyticsProductDto,
   AnalyticsSummaryDto,
+  CreateEmployeeBody,
+  CreateNormBody,
+  CreateOutletBody,
   CreatePhotoBody,
+  CreateProductBody,
   CreateWriteOffBody,
   EmployeeDto,
   IikoStatusDto,
+  ListNormsParams,
   ListWriteOffsParams,
   LoginResponse,
+  NormDto,
   OutletDto,
   PhotoDto,
   ProductDto,
+  ReconciliationParams,
+  ReconciliationRowDto,
   ReviewWriteOffBody,
+  UpdateEmployeeBody,
+  UpdateOutletBody,
+  UpdateProductBody,
   WriteOffDto,
 } from './types';
 
@@ -137,6 +153,16 @@ export const apiClient = {
     return request<EmployeeDto[]>(`/employees${buildQuery({ outlet_id: outletId })}`);
   },
 
+  listNorms(params: ListNormsParams = {}): Promise<NormDto[]> {
+    return request<NormDto[]>(
+      `/norms${buildQuery({ outlet_id: params.outlet_id, product_id: params.product_id })}`,
+    );
+  },
+
+  getPhoto(id: string): Promise<PhotoDto> {
+    return request<PhotoDto>(`/photos/${encodeURIComponent(id)}`);
+  },
+
   uploadPhoto(outletId: string, body: CreatePhotoBody): Promise<PhotoDto> {
     return request<PhotoDto>(`/photos${buildQuery({ outlet_id: outletId })}`, {
       method: 'POST',
@@ -157,6 +183,15 @@ export const apiClient = {
     );
   },
 
+  /** Full write-off list (no filter) for client-side aggregation. */
+  listAllWriteOffs(): Promise<WriteOffDto[]> {
+    return request<WriteOffDto[]>('/write-offs');
+  },
+
+  getWriteOff(id: string): Promise<WriteOffDto> {
+    return request<WriteOffDto>(`/write-offs/${encodeURIComponent(id)}`);
+  },
+
   reviewWriteOff(id: string, body: ReviewWriteOffBody): Promise<WriteOffDto> {
     return request<WriteOffDto>(`/write-offs/${encodeURIComponent(id)}/review`, {
       method: 'PATCH',
@@ -168,7 +203,82 @@ export const apiClient = {
     return request<AnalyticsSummaryDto>('/analytics/summary');
   },
 
+  analyticsOutlets(): Promise<AnalyticsOutletDto[]> {
+    return request<AnalyticsOutletDto[]>('/analytics/outlets');
+  },
+
+  analyticsEmployees(): Promise<AnalyticsEmployeeDto[]> {
+    return request<AnalyticsEmployeeDto[]>('/analytics/employees');
+  },
+
+  analyticsProducts(): Promise<AnalyticsProductDto[]> {
+    return request<AnalyticsProductDto[]>('/analytics/products');
+  },
+
+  analyticsHourly(): Promise<AnalyticsHourlyDto[]> {
+    return request<AnalyticsHourlyDto[]>('/analytics/hourly');
+  },
+
+  analyticsInvestigations(): Promise<AnalyticsInvestigationDto[]> {
+    return request<AnalyticsInvestigationDto[]>('/analytics/investigations');
+  },
+
+  inventoryReconciliation(params: ReconciliationParams = {}): Promise<ReconciliationRowDto[]> {
+    return request<ReconciliationRowDto[]>(
+      `/inventory/reconciliation${buildQuery({ outlet_id: params.outlet_id })}`,
+    );
+  },
+
   iikoStatus(): Promise<IikoStatusDto> {
     return request<IikoStatusDto>('/integrations/iiko/status');
+  },
+
+  createProduct(body: CreateProductBody): Promise<ProductDto> {
+    return request<ProductDto>('/admin/products', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+
+  updateProduct(id: string, body: UpdateProductBody): Promise<ProductDto> {
+    return request<ProductDto>(`/admin/products/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+  },
+
+  createNorm(body: CreateNormBody): Promise<NormDto> {
+    return request<NormDto>('/admin/norms', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+
+  createOutlet(body: CreateOutletBody): Promise<OutletDto> {
+    return request<OutletDto>('/admin/outlets', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+
+  updateOutlet(id: string, body: UpdateOutletBody): Promise<OutletDto> {
+    return request<OutletDto>(`/admin/outlets/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+  },
+
+  createEmployee(body: CreateEmployeeBody): Promise<EmployeeDto> {
+    return request<EmployeeDto>('/admin/employees', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+
+  updateEmployee(id: string, body: UpdateEmployeeBody): Promise<EmployeeDto> {
+    return request<EmployeeDto>(`/admin/employees/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
   },
 };

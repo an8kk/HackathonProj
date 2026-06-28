@@ -1,4 +1,4 @@
-import { useState, useId, useEffect, useRef, type ChangeEvent } from 'react';
+import { useState, useId, useMemo, useRef, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, ChevronLeft, ChevronRight, Camera, AlertTriangle,
@@ -7,10 +7,13 @@ import {
 } from 'lucide-react';
 import { useApp } from 'shared/qamqor-context/AppContext';
 import { useAuth } from 'shared/auth/session';
-import { apiClient, ApiError } from 'shared/api/client';
+import { ApiError } from 'shared/api/client';
+import { useCreateWriteOff, useEmployeeWriteOffs, useProducts, useUploadPhoto } from 'shared/api/queries';
 import { WRITE_OFF_REASONS, STAGES } from 'shared/qamqor-data/seed';
 import type { Product, WriteOffRequest } from 'shared/qamqor-data/types';
+import { buildRefMaps, toWriteOffRequest } from 'shared/qamqor-data/backendMap';
 import type { ReasonCode } from 'shared/api/types';
+import { CameraCapture, type CapturedPhoto } from 'widgets/camera-capture';
 // UI reason codes (seed) → backend ReasonCode enum.
 const REASON_CODE_MAP: Record<string, ReasonCode> = {
   expired: 'EXPIRED',
@@ -74,7 +77,7 @@ function formatDate(ts: string) {
 
 export default function QamqorEmployee() {
   const navigate = useNavigate();
-  const { requests, addRequest } = useApp();
+  const { addRequest } = useApp();
   const { user } = useAuth();
   const uid = useId();
 
@@ -89,31 +92,40 @@ export default function QamqorEmployee() {
   const [stageCode, setStageCode] = useState('');
   const [photoId, setPhotoId] = useState('');
   const [comment, setComment] = useState('');
-  const [products, setProducts] = useState<Product[]>([]);
+  const productsQuery = useProducts();
+  const products = useMemo<Product[]>(
+    () =>
+      (productsQuery.data ?? []).map(p => ({
+        id: p.id,
+        name: p.name,
+        type: p.unit === 'штуки' ? 'unit' : 'weight',
+        unit: p.unit,
+        costPerUnit: p.cost_per_unit,
+      })),
+    [productsQuery.data],
+  );
   const [photoFile, setPhotoFile] = useState<{ filename: string; contentType: string; base64: string } | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string>('');
+  const uploadPhoto = useUploadPhoto();
+  const createWriteOff = useCreateWriteOff();
+  const submitting = uploadPhoto.isPending || createWriteOff.isPending;
   const fileInputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    let active = true;
-    apiClient
-      .listProducts()
-      .then(list => {
-        if (!active) return;
-        setProducts(
-          list.map(p => ({
-            id: p.id,
-            name: p.name,
-            type: p.unit === 'штуки' ? 'unit' : 'weight',
-            unit: p.unit,
-            costPerUnit: p.cost_per_unit,
-          })),
-        );
-      })
-      .catch(() => { /* leave products empty; submit surfaces backend errors */ });
-    return () => { active = false; };
-  }, []);
 
-  const myRequests = requests.filter(r => r.locationId === DEMO_EMPLOYEE.locationId);
+  // История заявок и статистика — из реального бэкенда (GET /write-offs?employee_id=).
+  const myWriteOffsQuery = useEmployeeWriteOffs(user?.id);
+  const myRequestsRefs = useMemo(
+    () =>
+      buildRefMaps(
+        user?.outlet ? [user.outlet] : [],
+        user ? [{ id: user.id, name: user.name, role: user.role, active: user.active, outlet: user.outlet, outlet_id: user.outlet_id }] : [],
+        productsQuery.data ?? [],
+      ),
+    [user, productsQuery.data],
+  );
+  const myRequests = useMemo<WriteOffRequest[]>(
+    () => (myWriteOffsQuery.data ?? []).map(dto => toWriteOffRequest(dto, myRequestsRefs)),
+    [myWriteOffsQuery.data, myRequestsRefs],
+  );
 
   const product = products.find(p => p.id === productId);
 
@@ -144,9 +156,15 @@ export default function QamqorEmployee() {
     setStageCode('');
     setPhotoId('');
     setPhotoFile(null);
+    setPhotoPreview('');
     setComment('');
     setStep('product');
     setShowForm(false);
+  }
+  function handleCaptured(photo: CapturedPhoto) {
+    setPhotoFile({ filename: photo.filename, contentType: photo.contentType, base64: photo.base64 });
+    setPhotoPreview(photo.dataUrl);
+    setPhotoId(photo.filename);
   }
   function handlePhotoSelected(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -156,6 +174,7 @@ export default function QamqorEmployee() {
       const result = typeof reader.result === 'string' ? reader.result : '';
       const base64 = result.includes(',') ? result.slice(result.indexOf(',') + 1) : result;
       setPhotoFile({ filename: file.name, contentType: file.type || 'image/jpeg', base64 });
+      setPhotoPreview(result);
       setPhotoId(file.name);
     };
     reader.readAsDataURL(file);
@@ -176,19 +195,21 @@ export default function QamqorEmployee() {
       showToast('Сессия не найдена — войдите заново');
       return;
     }
-    setSubmitting(true);
     let uploadedPhotoId: string | undefined;
     try {
       if (photoFile) {
-        const photo = await apiClient.uploadPhoto(outletId, {
-          filename: photoFile.filename,
-          content_base64: photoFile.base64,
-          content_type: photoFile.contentType,
-          taken_at: new Date().toISOString(),
+        const photo = await uploadPhoto.mutateAsync({
+          outletId,
+          body: {
+            filename: photoFile.filename,
+            content_base64: photoFile.base64,
+            content_type: photoFile.contentType,
+            taken_at: new Date().toISOString(),
+          },
         });
         uploadedPhotoId = photo.id;
       }
-      await apiClient.createWriteOff({
+      await createWriteOff.mutateAsync({
         outlet_id: outletId,
         employee_id: employeeId,
         product_id: product.id,
@@ -200,7 +221,6 @@ export default function QamqorEmployee() {
         comment,
       });
     } catch (err) {
-      setSubmitting(false);
       showToast(err instanceof ApiError ? `Ошибка: ${err.code}` : 'Ошибка сети');
       return;
     }
@@ -229,7 +249,6 @@ export default function QamqorEmployee() {
       flags: buildFlags(),
     };
     addRequest(req);
-    setSubmitting(false);
     resetForm();
     setTab('requests');
     showToast('Заявка отправлена на проверку');
@@ -547,25 +566,26 @@ export default function QamqorEmployee() {
                       />
 
                       {!photoId ? (
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="w-full h-48 rounded-2xl border-2 border-dashed border-amber-DEFAULT bg-amber-light flex flex-col items-center justify-center gap-3 transition-all hover:bg-amber-light/80"
-                        >
-                          <Camera className="w-10 h-10 text-amber-dark" />
-                          <span className="text-sm font-semibold text-amber-dark">Сделать фото</span>
-                        </button>
+                        <CameraCapture
+                          onCapture={handleCaptured}
+                          onPickFile={() => fileInputRef.current?.click()}
+                        />
                       ) : (
                         <div>
-                          <PhotoPlaceholder id="A" color="#E8F5E9" />
+                          <img
+                            src={photoPreview}
+                            alt="Снимок продукта"
+                            className="w-full rounded-2xl object-cover"
+                            style={{ aspectRatio: '4 / 3' }}
+                          />
                           <div
                             className="mt-3 flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium"
                             style={{ background: '#E8F5E9', color: '#2E7D32' }}
                           >
                             <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span>фото сделано в приложении · {new Date().toLocaleDateString('ru-RU', {day:'2-digit',month:'2-digit'})} · {DEMO_EMPLOYEE.location.replace('Bahandi ','')}</span>
+                            <span>фото сделано в приложении · {new Date().toLocaleDateString('ru-RU', {day:'2-digit',month:'2-digit'})}</span>
                           </div>
-                          <button onClick={() => { setPhotoId(''); setPhotoFile(null); }} className="mt-2 text-xs text-text-muted underline">
+                          <button onClick={() => { setPhotoId(''); setPhotoFile(null); setPhotoPreview(''); }} className="mt-2 text-xs text-text-muted underline">
                             Переснять
                           </button>
                         </div>

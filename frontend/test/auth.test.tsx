@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { AuthProvider, useAuth } from '../src/shared/auth/session';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { useAuth } from '../src/shared/auth/session';
+import { renderWithProviders } from './test-utils';
 
 function jsonResponse(body: unknown): Response {
   return {
@@ -41,11 +42,7 @@ describe('AuthProvider', () => {
     };
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ success: true, data: loginPayload })));
 
-    render(
-      <AuthProvider>
-        <Harness />
-      </AuthProvider>,
-    );
+    renderWithProviders(<Harness />);
 
     expect(screen.getByTestId('user').textContent).toBe('anon');
 

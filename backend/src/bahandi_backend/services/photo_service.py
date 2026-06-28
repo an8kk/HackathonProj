@@ -9,14 +9,23 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import models
-from ..photos.ai import AnthropicPhotoAnalyzer, PhotoAnalyzer, RuleBasedPhotoAnalyzer
+from ..photos.ai import (
+    AnthropicPhotoAnalyzer,
+    OpenAiPhotoAnalyzer,
+    PhotoAnalyzer,
+    RuleBasedPhotoAnalyzer,
+)
 from ..photos.metadata import validate_metadata
-from ..photos.storage import PhotoStorage
+from ..photos.storage import PhotoStorage, build_storage
 from ..schemas import PhotoUploadRequest
 from ..settings import Settings
 
+__all__ = ['build_analyzer', 'build_storage', 'save_photo']
+
 
 def build_analyzer(settings: Settings) -> PhotoAnalyzer:
+    if settings.openai_api_key:
+        return OpenAiPhotoAnalyzer(api_key=settings.openai_api_key, model=settings.openai_model)
     if settings.anthropic_api_key:
         return AnthropicPhotoAnalyzer(
             api_key=settings.anthropic_api_key, model=settings.anthropic_model
@@ -24,8 +33,7 @@ def build_analyzer(settings: Settings) -> PhotoAnalyzer:
     return RuleBasedPhotoAnalyzer()
 
 
-def build_storage(settings: Settings) -> PhotoStorage:
-    return PhotoStorage(Path(settings.storage_dir))
+
 
 
 async def save_photo(
@@ -73,7 +81,7 @@ async def save_photo(
     storage_key = storage.build_key(
         outlet_id=outlet_id, photo_id=photo.id, uploaded_at=uploaded_at, suffix=suffix
     )
-    storage.write(storage_key, content)
+    await storage.write(storage_key, content, content_type=data.content_type)
     photo.storage_key = storage_key
     photo.ai_analysis = await analyzer.analyze(content=content, content_type=data.content_type)
     await session.flush()

@@ -6,6 +6,16 @@ from typing import Any, Protocol
 
 import httpx
 
+WASTE_PROMPT = (
+    'You are a food-waste write-off reviewer for fast-food outlets. '
+    'Look at the photo and respond ONLY with a JSON object with keys: '
+    'is_food_waste (bool), detected_product (string|null), confidence (0..1 number), '
+    'condition (short string), suggested_reason '
+    '(one of DAMAGED, EXPIRED, OVERCOOKED, RAW_WASTE, DROPPED, OTHER, or null), '
+    'fraud_warnings (array of short strings), reviewer_note (short string). '
+    'Answer in Russian for condition and reviewer_note.'
+)
+
 
 class PhotoAnalyzer(Protocol):
     async def analyze(self, *, content: bytes, content_type: str) -> dict[str, Any]: ...
@@ -91,6 +101,59 @@ class AnthropicPhotoAnalyzer:
         except (httpx.HTTPError, json.JSONDecodeError, KeyError) as error:
             return {
                 'provider': 'anthropic',
+                'status': 'failed',
+                'error': str(error),
+                'is_food_waste': None,
+                'detected_product': None,
+                'confidence': 0.0,
+                'fraud_warnings': [],
+                'reviewer_note': 'AI analysis failed; manual review required.',
+            }
+        finally:
+            if self._client is None:
+                await client.aclose()
+
+class OpenAiPhotoAnalyzer:
+    """Calls the OpenAI Chat Completions API (vision) to analyze waste photos."""
+
+    def __init__(self, *, api_key: str, model: str, client: httpx.AsyncClient | None = None) -> None:
+        self._api_key = api_key
+        self._model = model
+        self._client = client
+
+    async def analyze(self, *, content: bytes, content_type: str) -> dict[str, Any]:
+        data_url = f'data:{content_type};base64,{base64.b64encode(content).decode("ascii")}'
+        payload = {
+            'model': self._model,
+            'max_completion_tokens': 500,
+            'response_format': {'type': 'json_object'},
+            'messages': [
+                {
+                    'role': 'user',
+                    'content': [
+                        {'type': 'text', 'text': WASTE_PROMPT},
+                        {'type': 'image_url', 'image_url': {'url': data_url}},
+                    ],
+                }
+            ],
+        }
+        headers = {
+            'Authorization': f'Bearer {self._api_key}',
+            'Content-Type': 'application/json',
+        }
+        client = self._client or httpx.AsyncClient(base_url='https://api.openai.com', timeout=30)
+        try:
+            response = await client.post('/v1/chat/completions', json=payload, headers=headers)
+            response.raise_for_status()
+            body = response.json()
+            text = body['choices'][0]['message']['content']
+            parsed = json.loads(text)
+            parsed['provider'] = 'openai'
+            parsed['status'] = 'completed'
+            return parsed
+        except (httpx.HTTPError, json.JSONDecodeError, KeyError, IndexError) as error:
+            return {
+                'provider': 'openai',
                 'status': 'failed',
                 'error': str(error),
                 'is_food_waste': None,

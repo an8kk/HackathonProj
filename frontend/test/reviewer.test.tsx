@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
-import { AuthProvider } from '../src/shared/auth/session';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import QamqorManager from '../src/pages/qamqor-manager';
+import { renderWithProviders } from './test-utils';
 
 function jsonResponse(body: unknown): Response {
   return {
@@ -71,13 +70,7 @@ describe('QamqorManager review queue', () => {
     const fetchMock = vi.fn(async (url: unknown, _init?: unknown) => routedFetch(String(url)));
     vi.stubGlobal('fetch', fetchMock);
 
-    render(
-      <AuthProvider>
-        <MemoryRouter>
-          <QamqorManager />
-        </MemoryRouter>
-      </AuthProvider>,
-    );
+    renderWithProviders(<QamqorManager />);
 
     await waitFor(() => {
       expect(screen.getByText('Помидор')).toBeInTheDocument();

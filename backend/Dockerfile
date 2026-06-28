@@ -1,14 +1,18 @@
 FROM python:3.12-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PIP_DEFAULT_TIMEOUT=120 \
+    PIP_RETRIES=10
 
 WORKDIR /app
 
-COPY backend/pyproject.toml ./
+COPY backend/pyproject.toml backend/alembic.ini ./
 COPY backend/src ./src
+COPY backend/migrations ./migrations
 
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir setuptools wheel \
+ && pip install --no-cache-dir --no-build-isolation -e .
 
 EXPOSE 4000
 
